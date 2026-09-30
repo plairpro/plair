@@ -7,17 +7,37 @@
 .g-top{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;
   background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(14px);
   border-bottom:1px solid var(--line)}
-.g-top-in{display:flex;align-items:center;gap:10px;padding-block:11px}
-.g-brand{display:flex;align-items:center;gap:9px;text-decoration:none;min-width:0}
-.g-brand .logo{width:78px}
+.g-top-in{display:flex;align-items:center;gap:8px;padding-block:11px}
+.g-brand{display:flex;align-items:center;gap:9px;text-decoration:none;flex:none}
+.g-brand .logo{width:clamp(62px,17vw,84px)}
 .g-brand span{font-family:var(--display);font-weight:600;font-size:11px;letter-spacing:.2em;
   color:var(--dim);text-transform:uppercase;padding-top:2px}
-.g-top .g-sp{flex:1}
-.g-who{display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:5px 13px;
+.g-top .g-sp{flex:1;min-width:0}
+/* Кнопка «Связь» с общего сайта шире, чем нужно в этой шапке. */
+.g-top .button{min-width:0;padding:9px 18px 9px 30px;min-height:40px}
+
+.g-round{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--line-2);
+  background:none;color:var(--muted);display:grid;place-items:center;cursor:pointer;
+  font-family:var(--display);font-weight:600;font-size:15px;line-height:1;transition:.2s}
+.g-round:hover{color:var(--ink);border-color:var(--ink)}
+
+.g-who{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:5px 6px;
   border-radius:999px;border:1px solid var(--line-2);background:none;color:var(--muted);
-  font-size:13.5px;font-weight:500;white-space:nowrap;cursor:pointer;transition:.2s}
+  font-size:13.5px;font-weight:500;white-space:nowrap;cursor:pointer;transition:.2s;
+  min-width:40px;justify-content:center}
 .g-who:hover{color:var(--ink);border-color:var(--ink)}
-.g-who img{width:22px;height:22px;border-radius:50%;flex:none;display:block}
+.g-who img,.g-who svg{width:24px;height:24px;border-radius:50%;flex:none;display:block}
+.g-who svg{border-radius:0;fill:none;stroke:currentColor;stroke-width:1.7}
+.g-who b{font-weight:500;padding-right:7px}
+/* Шапка ужимается ступенями: сначала уходит подпись у имени, потом слово
+   GAMES у логотипа, потом поля у кнопки. На 320 точках всё ещё влезает. */
+@media (max-width:539px){ .g-who b{display:none} }
+@media (max-width:419px){ .g-brand span{display:none} }
+@media (max-width:359px){
+  .g-top-in{gap:6px}
+  .g-top .button{padding:9px 14px 9px 26px}
+  .g-top .button .blob{left:12px}
+}
 
 /* ── вступление ─────────────────────────────────────────── */
 .g-intro{padding-block:28px 6px}
@@ -107,6 +127,20 @@
 .g-sheet .button{margin-top:20px;width:100%}
 .g-pick{display:flex;flex-wrap:wrap;gap:7px}
 .g-pick .g-chip{min-height:32px;padding:5px 12px}
+
+/* ── инструкция ─────────────────────────────────────────── */
+.g-doc h4{font-family:var(--display);font-weight:600;font-size:14px;letter-spacing:-.01em;
+  margin:22px 0 8px;color:var(--ink)}
+.g-doc h4:first-child{margin-top:8px}
+.g-doc p{color:var(--muted);font-size:14px;margin:0 0 10px;line-height:1.5}
+.g-doc ol,.g-doc ul{color:var(--muted);font-size:14px;line-height:1.5;margin:0;padding-left:20px}
+.g-doc li{margin-bottom:7px}
+.g-doc li:last-child{margin-bottom:0}
+.g-doc b{color:var(--ink);font-weight:600}
+.g-doc code{font-size:12.5px;background:var(--surface);padding:1px 5px;border-radius:5px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.g-doc .g-aside{margin-top:22px;padding:12px 13px;border:1px dashed var(--line-2);
+  border-radius:12px;color:var(--dim);font-size:13px;line-height:1.45}
 
 .g-out{margin-top:18px;border-top:1px solid var(--line);padding-top:16px}
 .g-out h4{font-family:var(--display);font-weight:600;font-size:15px;margin:0 0 8px;letter-spacing:-.02em}

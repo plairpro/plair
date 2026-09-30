@@ -44,11 +44,16 @@
     drawWho();
   }
 
+  var ICON_USER = '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+    '<circle cx="12" cy="8.5" r="3.7"/><path d="M4.8 20c.6-3.8 3.6-6 7.2-6s6.6 2.2 7.2 6" ' +
+    'stroke-linecap="round"/></svg>';
+
   function drawWho() {
     var b = $('who');
     b.innerHTML = me
-      ? '<img src="' + esc(avatar(me.login)) + '" alt=""><span>@' + esc(me.login) + '</span>'
-      : 'Set your GitHub name';
+      ? '<img src="' + esc(avatar(me.login)) + '" alt=""><b>@' + esc(me.login) + '</b>'
+      : ICON_USER + '<b>Who are you?</b>';
+    b.setAttribute('aria-label', me ? 'Signed in as @' + me.login : 'Set your GitHub name');
   }
 
   function avatar(login) { return 'https://github.com/' + encodeURIComponent(login) + '.png?size=64'; }
@@ -123,7 +128,11 @@
         '<span class="blob" aria-hidden="true"></span><span class="f1">Submit a game</span>' +
         '<span class="f2" aria-hidden="true">Submit a game<svg viewBox="0 0 24 24">' +
         '<path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
-        '</button></div>';
+        '</button>' +
+        '<p class="g-hint" style="margin-top:14px"><button type="button" id="empty-how" ' +
+        'style="border:0;background:none;color:var(--muted);font:inherit;cursor:pointer;' +
+        'text-decoration:underline;text-underline-offset:3px">How to add a game</button></p>' +
+        '</div>';
       return;
     }
     $('feed').innerHTML = list.length
@@ -162,6 +171,57 @@
       '<span class="blob" aria-hidden="true"></span><span class="f1">' + esc(label) + '</span>' +
       '<span class="f2" aria-hidden="true">' + esc(label) + '<svg viewBox="0 0 24 24">' +
       '<path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>';
+  }
+
+  /* ── инструкция ──────────────────────────────────────── */
+
+  function howSheet() {
+    sheet('<div class="g-sheet-top"><div><h3>How to add a game</h3>' +
+      '<p class="g-lede">Four steps, and about ten minutes the first time.</p></div>' +
+      '<span class="g-sp"></span>' + X + '</div>' +
+      '<div class="g-doc">' +
+
+      '<h4>What your game needs first</h4>' +
+      '<ul>' +
+        '<li>It <b>runs in a browser</b>. No downloads, no installers, no store links.</li>' +
+        '<li>It lives in a <b>public repository you own</b> on GitHub, with Pages turned on ' +
+          '(Settings &rarr; Pages &rarr; pick a branch).</li>' +
+        '<li>There is a <b>cover image</b> in that repository: landscape, at least 800px across. ' +
+          'A screenshot of the game itself works better than a logo.</li>' +
+      '</ul>' +
+
+      '<h4>Then</h4>' +
+      '<ol>' +
+        '<li>Tell the page your GitHub username.</li>' +
+        '<li>Press <b>Submit</b> and paste the address of your repository.</li>' +
+        '<li>Fill in the title, one line about it, and up to five genres.</li>' +
+        '<li>Copy what the form builds and paste it into the catalogue file on GitHub. ' +
+          'Your card shows up about a minute later.</li>' +
+      '</ol>' +
+
+      '<h4>What gets checked</h4>' +
+      '<p>The repository exists and is public. You own it. Pages is on. The cover really loads and ' +
+        'is wider than it is tall. The play address is read from GitHub, not typed by you &mdash; ' +
+        'a custom domain is picked up from the repository&rsquo;s own <code>CNAME</code> file.</p>' +
+
+      '<h4>Worth knowing</h4>' +
+      '<ul>' +
+        '<li><b>Only your own repositories.</b> Someone else&rsquo;s is rejected, even if the game ' +
+          'is yours &mdash; put it under your own account first.</li>' +
+        '<li><b>Keep it light.</b> Somebody will open it on a phone, on mobile data.</li>' +
+        '<li><b>Landscape-only game?</b> Say so in the one-line description.</li>' +
+        '<li>Some games refuse to be embedded. Those open in a separate tab instead, and that is ' +
+          'fine &mdash; nothing to fix on your side.</li>' +
+        '<li>Submitting the same repository again <b>replaces</b> the old card rather than ' +
+          'adding a second one.</li>' +
+      '</ul>' +
+
+      '<p class="g-aside"><b>Why the last step is manual.</b> Writing to the catalogue needs a key, ' +
+        'and a key in a web page is a key everyone has. Until the real sign-in is built, the form ' +
+        'hands you the text and you commit it yourself &mdash; which is also why the page currently ' +
+        'takes your word for who you are.</p>' +
+
+      '</div>');
   }
 
   /* ── имя пользователя ────────────────────────────────── */
@@ -459,7 +519,7 @@
   document.addEventListener('click', function (e) {
     var el = e.target.closest && e.target.closest(
       '[data-tag],[data-play],[data-pick],[data-close],[data-quit],' +
-      '#who,#submit-open,#empty-go,#w-go,#w-clear,#f-go,#f-copy');
+      '#how,#who,#submit-open,#empty-go,#empty-how,#w-go,#w-clear,#f-go,#f-copy');
     if (!el) return;
 
     if (el.dataset.tag) { filter = el.dataset.tag; renderFilters(); renderFeed(); return; }
@@ -481,6 +541,7 @@
       return;
     }
 
+    if (el.id === 'how' || el.id === 'empty-how') { howSheet(); return; }
     if (el.id === 'who') { whoSheet(); return; }
     if (el.id === 'submit-open' || el.id === 'empty-go') { submitSheet(); return; }
     if (el.id === 'w-go') { saveWho(); return; }
