@@ -100,9 +100,13 @@
   }
 
   function cardHTML(g, i) {
+    var mark = String(g.title || '?').trim().slice(0, 1).toUpperCase();
     return '<article class="g-card">' +
-      '<button class="g-cover" type="button" data-play="' + i + '" aria-label="Play ' + esc(g.title) + '">' +
-        (g.cover ? '<img src="' + esc(g.cover) + '" alt="" loading="lazy" decoding="async">' : '') +
+      '<button class="g-cover' + (g.cover ? '' : ' is-blank') + '" type="button" data-play="' + i +
+        '" aria-label="Play ' + esc(g.title) + '">' +
+        (g.cover
+          ? '<img src="' + esc(g.cover) + '" alt="" loading="lazy" decoding="async">'
+          : '<span class="g-mark" aria-hidden="true">' + esc(mark) + '</span>') +
         '<span class="g-play">' + ICON_PLAY + 'Play</span></button>' +
       '<div class="g-body"><h2>' + esc(g.title) + '</h2>' +
         (g.blurb ? '<p>' + esc(g.blurb) + '</p>' : '') +
@@ -362,7 +366,8 @@
                   html: r.html_url, blurb: r.description || '' };
         msg.className = 'g-hint good';
         msg.innerHTML = 'Yours, and it plays at <code>' + esc(url) + '</code>' +
-          (domain ? ' (its own domain).' : '.');
+          (domain ? ' (its own domain).' : '.') +
+          ' <button type="button" id="f-try" class="g-link">Try it in the player</button>';
         var blurb = $('f-blurb');
         if (blurb && !blurb.value && found.blurb) blurb.value = found.blurb.slice(0, 100);
         return found;
@@ -464,53 +469,109 @@
 
   /* ── запуск игры ─────────────────────────────────────── */
 
-  var player = null;
+  var player = null, wake = null;
 
-  function play(g) {
-    shut();
-    var safe = /^https:\/\//i.test(g.url) && !/^https:\/\/(www\.)?plair\.pro/i.test(g.url);
+  // Можно ли эту ссылку открыть прямо в странице. Свой же домен не
+  // встраиваем: страница в странице — верный способ запутаться.
+  function embeddable(url) {
+    return /^https:\/\//i.test(url) && !/^https:\/\/(www\.)?plair\.pro/i.test(url);
+  }
+
+  // Экран телефона гаснет посреди игры, если по нему не возят пальцем.
+  function keepAwake() {
+    try {
+      if (navigator.wakeLock && navigator.wakeLock.request) {
+        navigator.wakeLock.request('screen').then(function (l) {
+          if (player) wake = l; else l.release();
+        }).catch(function () {});
+      }
+    } catch (e) { /* не дали — не беда */ }
+  }
+
+  function play(g, opts) {
+    opts = opts || {};
+    // При проверке из формы панель не закрываем: игрок посмотрит и
+    // вернётся к незаполненным полям.
+    if (!opts.preview) shut();
     var p = document.createElement('div');
     p.className = 'g-player';
     p.innerHTML = '<div class="g-bar">' +
       '<button class="g-x" type="button" data-quit aria-label="Close the game">' +
         '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 16M20 4 4 20"/></svg></button>' +
       '<strong>' + esc(g.title) + '</strong><span class="g-sp"></span>' +
-      '<a class="g-src" href="' + esc(g.url) + '" target="_blank" rel="noopener">Open separately</a></div>' +
-      '<div class="g-stage" id="stage"></div>';
+      '<button class="g-x" type="button" data-full aria-label="Fill the screen">' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" ' +
+        'stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+      '</div><div class="g-stage" id="stage"></div>';
     document.body.appendChild(p);
     document.body.style.overflow = 'hidden';
     player = p;
-    history.pushState({ play: g.id }, '', '#play-' + g.id);
+    if (!opts.noHash) history.pushState({ play: g.id }, '', '#play-' + g.id);
+    keepAwake();
 
     var stage = p.querySelector('#stage');
-    if (!safe) {
+
+    if (!embeddable(g.url)) {
       stage.innerHTML = '<div class="g-fallback"><h4>This one opens separately</h4>' +
-        '<p>The address is not one we can embed.</p></div>';
+        '<p>The address is not one the page can hold.</p>' +
+        '<a class="button" href="' + esc(g.url) + '" target="_blank" rel="noopener">' +
+        '<span class="blob" aria-hidden="true"></span><span class="f1">Open the game</span>' +
+        '<span class="f2" aria-hidden="true">Open the game<svg viewBox="0 0 24 24">' +
+        '<path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+        '</span></a></div>';
       return;
     }
+
+    stage.innerHTML = '<p class="g-loading" id="loading">Loading ' + esc(g.title) + '&hellip;</p>';
+
     var f = document.createElement('iframe');
     f.src = g.url;
     f.title = g.title;
-    f.allow = 'fullscreen; autoplay; gamepad; accelerometer; gyroscope';
-    f.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-pointer-lock allow-popups allow-forms');
+    f.allow = 'fullscreen; autoplay; gamepad; accelerometer; gyroscope; magnetometer; xr-spatial-tracking';
+    f.setAttribute('sandbox',
+      'allow-scripts allow-same-origin allow-pointer-lock allow-popups allow-forms allow-modals allow-orientation-lock');
     stage.appendChild(f);
 
-    // Игра, запретившая себя встраивать, не сообщает об этом; о беде мы
-    // узнаём только по тому, что окно так и не ожило.
     var landed = false;
-    f.addEventListener('load', function () { landed = true; });
+    f.addEventListener('load', function () {
+      landed = true;
+      var l = $('loading');
+      if (l) l.remove();
+    });
+
+    // Игра, запретившая себя встраивать, об этом не сообщает — узнать
+    // можно только по тому, что окно не ожило. Поэтому кадр мы НЕ
+    // убираем: он может просто грузиться долго. Вместо этого внизу
+    // появляется полоска с запасным выходом, а игра продолжает грузиться.
     setTimeout(function () {
-      if (landed || !player) return;
-      stage.innerHTML = '<div class="g-fallback"><h4>It will not load inside the page</h4>' +
-        '<p>Some games refuse to be embedded. Open it separately from the link above.</p></div>';
-    }, 4000);
+      if (landed || !player || !player.isConnected) return;
+      var l = $('loading');
+      if (l) l.textContent = 'Still loading…';
+      var bar = document.createElement('div');
+      bar.className = 'g-rescue';
+      bar.innerHTML = '<span>Taking a while. Some games will not run inside a page.</span>' +
+        '<a href="' + esc(g.url) + '" target="_blank" rel="noopener">Open separately</a>';
+      stage.appendChild(bar);
+    }, 7000);
+  }
+
+  function goFull() {
+    var stage = player && player.querySelector('.g-stage');
+    if (!stage) return;
+    try {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else if (stage.requestFullscreen) stage.requestFullscreen().catch(function () {});
+      else if (stage.webkitRequestFullscreen) stage.webkitRequestFullscreen();
+    } catch (e) { /* не дали — играем как есть */ }
   }
 
   function quit() {
     if (!player) return;
+    try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {}
+    if (wake) { try { wake.release(); } catch (e) {} wake = null; }
     player.remove();
     player = null;
-    document.body.style.overflow = '';
+    if (!open) document.body.style.overflow = '';
     if (location.hash.indexOf('#play-') === 0) history.back();
   }
 
@@ -518,13 +579,14 @@
 
   document.addEventListener('click', function (e) {
     var el = e.target.closest && e.target.closest(
-      '[data-tag],[data-play],[data-pick],[data-close],[data-quit],' +
-      '#how,#who,#submit-open,#empty-go,#empty-how,#w-go,#w-clear,#f-go,#f-copy');
+      '[data-tag],[data-play],[data-pick],[data-close],[data-quit],[data-full],' +
+      '#how,#who,#submit-open,#empty-go,#empty-how,#w-go,#w-clear,#f-go,#f-copy,#f-try');
     if (!el) return;
 
     if (el.dataset.tag) { filter = el.dataset.tag; renderFilters(); renderFeed(); return; }
     if (el.dataset.play !== undefined) { play(games[Number(el.dataset.play)]); return; }
     if (el.dataset.quit !== undefined) { quit(); return; }
+    if (el.dataset.full !== undefined) { goFull(); return; }
     if (el.dataset.close !== undefined) { shut(); return; }
 
     if (el.dataset.pick) {
@@ -547,6 +609,12 @@
     if (el.id === 'w-go') { saveWho(); return; }
     if (el.id === 'w-clear') { me = null; saveMe(); shut(); return; }
     if (el.id === 'f-go') { build(); return; }
+    if (el.id === 'f-try') {
+      // Проверка перед подачей: откроется ли игра прямо в странице.
+      if (found) play({ id: 'try', title: $('f-title').value.trim() || found.repo, url: found.url },
+                      { noHash: true, preview: true });
+      return;
+    }
     if (el.id === 'f-copy') { copyJSON(); return; }
   });
 

@@ -64,6 +64,12 @@
 .g-cover{position:relative;display:block;width:100%;aspect-ratio:16/9;background:var(--surface);
   border:0;padding:0;overflow:hidden;cursor:pointer}
 .g-cover img{width:100%;height:100%;object-fit:cover;display:block}
+/* Карточка без обложки не должна быть дырой: ставим фирменную заглушку. */
+.g-cover.is-blank{background:radial-gradient(120% 120% at 20% 0%,
+  color-mix(in srgb,var(--accent) 16%,var(--surface)),var(--bg-2))}
+.g-mark{position:absolute;inset:0;display:grid;place-items:center;
+  font-family:var(--display);font-weight:800;font-size:clamp(48px,14vw,78px);
+  letter-spacing:-.05em;color:color-mix(in srgb,var(--accent) 36%,transparent)}
 .g-cover::after{content:"";position:absolute;inset:0;
   background:linear-gradient(180deg,transparent 55%,rgba(12,14,12,.74))}
 .g-play{position:absolute;left:12px;bottom:12px;z-index:1;display:flex;align-items:center;gap:7px;
@@ -124,6 +130,10 @@
 .g-hint.good{color:var(--accent)}
 .g-hint.busy{color:var(--muted)}
 .g-hint code{font-size:12px;background:var(--surface);padding:1px 5px;border-radius:5px}
+/* Кнопка, которая живёт внутри строки подсказки и читается как ссылка. */
+.g-link{border:0;background:none;padding:0;font:inherit;color:var(--accent);font-weight:600;
+  cursor:pointer;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
+.g-link:hover{color:var(--ink)}
 .g-sheet .button{margin-top:20px;width:100%}
 .g-pick{display:flex;flex-wrap:wrap;gap:7px}
 .g-pick .g-chip{min-height:32px;padding:5px 12px}
@@ -159,8 +169,18 @@
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .g-bar .g-sp{flex:1}
 .g-stage{flex:1;position:relative;min-height:0;display:grid;place-items:center;
-  padding-bottom:env(safe-area-inset-bottom,0px)}
-.g-stage iframe{width:100%;height:100%;border:0;display:block;background:var(--bg)}
+  padding-bottom:env(safe-area-inset-bottom,0px);background:var(--bg)}
+.g-stage iframe{width:100%;height:100%;border:0;display:block;background:var(--bg);
+  grid-area:1/1;z-index:1}
+.g-loading{grid-area:1/1;place-self:center;color:var(--dim);font-size:14px;margin:0;
+  text-align:center;padding:0 20px}
+/* Запасной выход: не стирает игру, а подсказывает снизу, пока та грузится. */
+.g-rescue{position:absolute;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));
+  z-index:2;display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center;
+  padding:10px 14px;border-radius:12px;border:1px solid var(--line-2);
+  background:color-mix(in srgb,var(--bg-2) 94%,transparent);backdrop-filter:blur(8px);
+  color:var(--muted);font-size:13px;text-align:center}
+.g-rescue a{color:var(--accent);font-weight:600;white-space:nowrap}
 .g-fallback{max-width:340px;text-align:center;padding:24px}
 .g-fallback h4{font-family:var(--display);font-weight:600;font-size:17px;margin:0 0 8px}
 .g-fallback p{color:var(--muted);font-size:13.5px;margin:0}
