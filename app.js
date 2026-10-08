@@ -75,31 +75,19 @@
      а широкому кадру сверху приходится уступить им место. */
   function rowsFor(media, narrow) {
     const isTall = (item) => ratio(item) < 1.2;
-    const head = media.slice(0, 1), rest = media.slice(1);
-    if (!rest.length) return [{ items: head, cap: isTall(media[0]) ? 460 : 420 }];
-    if (!narrow && media.every(isTall)) return [{ items: media, cap: 430 }];
-    // На узком экране в свою строку кадр уходит не только когда он широкий,
-    // но и когда близок к квадрату: пара почти квадратных скриншотов в одной
-    // строке даёт по 150 px на кадр, а в них мелкий интерфейс.
-    const isPortrait = (item) => ratio(item) < 0.9;
-    if (narrow && !media.some(isPortrait)) return media.map((m) => ({ items: [m], cap: 320 }));
-    const restTall = rest.every(isTall);
-    const rows = [
-      { items: head, cap: isTall(media[0]) ? 430 : restTall ? (narrow ? 320 : 300) : (narrow ? 340 : 380) },
-      { items: rest, cap: restTall ? (narrow ? 340 : 430) : 300 }
-    ];
-    // На узком экране в ряд влезает не больше двух вертикальных кадров:
-    // третий ужал бы всех до марок. Разбиваем такой ряд по двое, оставляя
-    // тот же `cap`, — тогда одиночный кадр в последнем ряду выходит той же
-    // ширины, что и кадры в ряду над ним, и строй не ломается.
-    if (!narrow) return rows;
-    return rows.flatMap((row) => {
-      if (row.items.length < 3 || !row.items.every(isTall)) return [row];
-      const out = [];
-      for (let i = 0; i < row.items.length; i += 2) {
-        out.push({ items: row.items.slice(i, i + 2), cap: row.cap });
-      }
-      return out;
+    // Кейс верстается по два кадра в ряд: два сверху, два снизу.
+    // Исключение — узкий экран. Пара широких кадров рядом даёт там по
+    // 170 px на кадр, и внутри уже ничего не разглядеть, поэтому на
+    // телефоне широкие идут по одному, а вертикальные по-прежнему парами.
+    const perRow = narrow && !media.every(isTall) ? 1 : 2;
+    const rows = [];
+    for (let i = 0; i < media.length; i += perRow) rows.push(media.slice(i, i + perRow));
+    // Нечётный последний кадр занимает ряд целиком — так он выходит той
+    // же ширины, что и ряд над ним, и строй не ломается.
+    return rows.map((items) => {
+      const tall = items.every(isTall);
+      if (items.length === 1) return { items, cap: tall ? 460 : narrow ? 320 : 400 };
+      return { items, cap: tall ? 430 : 300 };
     });
   }
 
