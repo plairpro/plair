@@ -58,6 +58,17 @@ window.PLAIR_CONFIG = {
 window.PLAIR_CLIENTS = [];
 window.PLAIR_CASES = [
   {
+    id: "memsbox",
+    title: "Мемсбокс",
+    category: "Веб / карточная",
+    description: "Карточный коллекционный лутбокс-рогалик про мемы в стиле Таро.",
+    media: [
+      { type: "image", src: "/assets/memsbox-1.webp", w: 2000, h: 1143, alt: "Выпавшая карта «Капибара» в оформлении таро на синем фоне с лучами в игре «Мемсбокс»" },
+      { type: "image", src: "/assets/memsbox-2.webp", w: 2000, h: 1143, alt: "Три карты в руке с бафами и дебафами в игре «Мемсбокс»" },
+      { type: "image", src: "/assets/memsbox-3.webp", w: 2000, h: 1143, alt: "Коллекция из рубашек карт и нескольких открытых мемов в игре «Мемсбокс»" }
+    ]
+  },
+  {
     id: "gaica",
     title: "GAICA",
     category: "Хакатон / платформа",
