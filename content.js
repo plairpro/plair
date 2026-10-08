@@ -58,6 +58,18 @@ window.PLAIR_CONFIG = {
 window.PLAIR_CLIENTS = [];
 window.PLAIR_CASES = [
   {
+    id: "vernye-resheniya",
+    title: "Верные решения",
+    category: "Web / стенд",
+    description: "Математический раннер на скорость мышления и реакции для стенда Почтатеха.",
+    media: [
+      { type: "image", src: "/assets/vernye-resheniya-1.webp", w: 2000, h: 1143, alt: "Заставка игры «Верные решения» с ровером Почтатеха на городской улице" },
+      { type: "image", src: "/assets/vernye-resheniya-2.webp", w: 2000, h: 1143, alt: "Ровер едет к кубикам с ответами на пример «4 − 2» в игре «Верные решения»" },
+      { type: "image", src: "/assets/vernye-resheniya-3.webp", w: 2000, h: 1143, alt: "Ровер подъезжает к зданию Почты России в конце заезда в игре «Верные решения»" },
+      { type: "image", src: "/assets/vernye-resheniya-4.webp", w: 2000, h: 1143, alt: "Экран итога «Доставлено» с набранными баллами в игре «Верные решения»" }
+    ]
+  },
+  {
     id: "memsbox",
     title: "Мемсбокс",
     category: "Веб / карточная",
