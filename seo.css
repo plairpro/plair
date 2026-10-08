@@ -236,14 +236,23 @@ details p{margin-top:12px}
 @media (max-width:980px){
   .hero-grid{grid-template-columns:1fr}
   .hero-facts{border-left:0;border-top:1px solid var(--line);padding-left:0;padding-top:18px}
-  /* В одну колонку навигация уходит под коллаж и прижимается к низу карточки.
-     Карточки одной высоты, поэтому стрелки и здесь стоят на одном уровне.
+  /* В одну колонку карточки больше НЕ равняются по самой высокой: у кейсов
+     разное число кадров, и из-за выравнивания в коротких карточках
+     набегало под восемь сотен пустых точек — коллаж висел по центру
+     растянутой строки, оторванный и от текста, и от стрелок. Теперь всё
+     идёт встык: текст, сразу под ним коллаж, под коллажем навигация.
      display:contents распускает текстовую колонку в сетку карточки, а order
      пропускает коллаж вперёд — в разметке он идёт после текста. */
-  .case-card{grid-template-columns:1fr;grid-template-rows:auto 1fr auto}
+  .carousel-track{align-items:start}
+  .case-card{height:auto;grid-template-columns:1fr;grid-template-rows:auto auto auto}
   .case-text{display:contents}
   .case-copy{align-self:start}
-  .case-nav{order:1;align-self:end}
+  .case-card>.tilt{align-self:start}
+  .case-nav{order:1;align-self:start;margin-top:clamp(16px,3.2vw,26px)}
+  /* Кадров на телефоне четыре и идут столбиком, поэтому подложка и зазоры
+     между ними сжимаются до минимума — иначе карточка растёт на пустом. */
+  .collage{padding:7px;gap:7px}
+  .collage-row{gap:7px}
   .service-card{grid-template-columns:auto minmax(0,1fr) auto;row-gap:7px}
   .service-card p{grid-column:2/-1}
   .studio{grid-template-columns:1fr}
