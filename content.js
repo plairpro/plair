@@ -65,8 +65,8 @@ window.PLAIR_CASES = [
     media: [
       { type: "image", src: "/assets/vernye-resheniya-1.webp", w: 2000, h: 1143, alt: "Заставка игры «Верные решения» с ровером Почтатеха на городской улице" },
       { type: "image", src: "/assets/vernye-resheniya-2.webp", w: 2000, h: 1143, alt: "Ровер едет к кубикам с ответами на пример «4 − 2» в игре «Верные решения»" },
-      { type: "image", src: "/assets/vernye-resheniya-3.webp", w: 2000, h: 1143, alt: "Ровер подъезжает к зданию Почты России в конце заезда в игре «Верные решения»" },
-      { type: "image", src: "/assets/vernye-resheniya-4.webp", w: 2000, h: 1143, alt: "Экран итога «Доставлено» с набранными баллами в игре «Верные решения»" }
+      { type: "image", src: "/assets/vernye-resheniya-4.webp", w: 2000, h: 1143, alt: "Экран итога «Доставлено» с набранными баллами в игре «Верные решения»" },
+      { type: "image", src: "/assets/vernye-resheniya-5.webp", w: 2000, h: 1143, alt: "Посетители стенда Почтатеха играют в «Верные решения» на большом экране" }
     ]
   },
   {
