@@ -103,7 +103,8 @@ window.PLAIR_CASES = [
     media: [
       { type: "image", src: "/assets/game-open-lab-1.webp", w: 1280, h: 853, alt: "Общее фото участников Game Open Lab с дипломами на фоне экрана GOL Direct" },
       { type: "image", src: "/assets/game-open-lab-2.webp", w: 1280, h: 853, alt: "Паблик-ток «Будущее игровой индустрии» в полном зале на Game Open Lab" },
-      { type: "image", src: "/assets/game-open-lab-3.webp", w: 1280, h: 853, alt: "Рабочая зона геймджема с командами за компьютерами на Game Open Lab" }
+      { type: "image", src: "/assets/game-open-lab-3.webp", w: 1280, h: 853, alt: "Рабочая зона геймджема с командами за компьютерами на Game Open Lab" },
+      { type: "image", src: "/assets/game-open-lab-4.webp", w: 1280, h: 853, alt: "Двое экспертов с микрофонами отвечают залу на Game Open Lab" }
     ]
   },
   {
