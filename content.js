@@ -90,7 +90,8 @@ window.PLAIR_CASES = [
     media: [
       { type: "image", src: "/assets/gaica-1.webp", w: 1600, h: 1067, alt: "Награждение победителей хакатона «GAICA: игровая арена ИИ» на сцене" },
       { type: "image", src: "/assets/gaica-2.webp", w: 1600, h: 1067, alt: "Участники GAICA на пуфах смотрят трансляцию матчей ИИ-агентов" },
-      { type: "image", src: "/assets/gaica-3.webp", w: 1600, h: 1067, alt: "Призы GAICA в виде гаек на стенде турнира" }
+      { type: "image", src: "/assets/gaica-3.webp", w: 1600, h: 1067, alt: "Призы GAICA в виде гаек на стенде турнира" },
+      { type: "image", src: "/assets/gaica-4.webp", w: 1600, h: 1067, alt: "Общее фото участников и жюри финала GAICA на сцене стенда на РВФ" }
     ]
   },
   {
