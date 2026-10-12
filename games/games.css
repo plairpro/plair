@@ -25,8 +25,6 @@
 }
 .g-brand{display:flex;align-items:center;gap:9px;text-decoration:none;flex:none}
 .g-brand .logo{width:clamp(62px,17vw,84px)}
-.g-brand span{font-family:var(--display);font-weight:600;font-size:11px;letter-spacing:.2em;
-  color:var(--accent);text-transform:uppercase}
 .g-top .g-sp{flex:1;min-width:0}
 
 
@@ -82,9 +80,7 @@
 .g-who img,.g-who svg{width:24px;height:24px;border-radius:50%;flex:none;display:block}
 .g-who svg{border-radius:0;fill:none;stroke:currentColor;stroke-width:1.7}
 .g-who b{display:none}
-/* Шапка ужимается ступенями: на узком телефоне уходит слово GAMES у
-   логотипа, на самом узком — чуть сжимаются промежутки. */
-@media (max-width:369px){ .g-brand span{display:none} }
+/* На самом узком телефоне чуть сжимаются промежутки. */
 @media (max-width:359px){ .g-top-in,.g-acts{gap:6px} }
 
 /* ── фильтр ─────────────────────────────────────────────── */
