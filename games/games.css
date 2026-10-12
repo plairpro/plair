@@ -89,14 +89,22 @@
 .g-veil{position:absolute;inset:0;z-index:1;pointer-events:none;
   background:linear-gradient(180deg,rgba(6,8,6,.72) 0%,rgba(6,8,6,.12) 22%,
     rgba(6,8,6,.1) 44%,rgba(6,8,6,.6) 70%,rgba(6,8,6,.92) 88%,rgba(6,8,6,.96) 100%)}
+/* Кнопка — зелёное кольцо с затемнённой серединой: сплошной зелёный
+   круг забивал обложку, а кольцо её показывает и само читается. */
 .g-go{position:absolute;z-index:3;left:50%;top:50%;transform:translate(-50%,-50%);
-  width:66px;height:66px;border-radius:50%;border:0;cursor:pointer;
-  background:var(--accent);color:var(--on-accent);display:grid;place-items:center;
-  box-shadow:0 14px 38px rgba(0,0,0,.5);transition:transform .18s ease}
-.g-go svg{width:24px;height:24px;fill:currentColor;margin-left:3px}
-.g-go:hover{transform:translate(-50%,-50%) scale(1.06)}
-.g-go:active{transform:translate(-50%,-50%) scale(.96)}
-.g-go:focus-visible{outline:3px solid var(--ink);outline-offset:4px}
+  width:72px;height:72px;border-radius:50%;cursor:pointer;
+  border:2px solid var(--accent);background:rgba(6,8,6,.42);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  color:var(--accent);display:grid;place-items:center;
+  box-shadow:0 10px 30px rgba(0,0,0,.45),0 0 0 6px rgba(52,199,89,.12);
+  transition:transform .18s ease,background .18s ease,box-shadow .18s ease}
+.g-go svg{width:26px;height:26px;fill:currentColor;margin-left:3px}
+.g-go:hover{transform:translate(-50%,-50%) scale(1.07);background:rgba(6,8,6,.62);
+  box-shadow:0 12px 34px rgba(0,0,0,.5),0 0 0 9px rgba(52,199,89,.16)}
+.g-go:active{transform:translate(-50%,-50%) scale(.95)}
+.g-go:focus-visible{outline:3px solid #fff;outline-offset:4px}
+@media (prefers-reduced-motion:reduce){.g-go{transition:none}}
+
 .g-info{position:relative;z-index:2;padding:0 16px calc(20px + env(safe-area-inset-bottom,0px));
   max-width:34rem}
 .g-info h2{font-family:var(--display);font-weight:600;letter-spacing:-.035em;
