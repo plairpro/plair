@@ -14,6 +14,10 @@
   'use strict';
 
   var CATALOG = '/games/games.json';
+  /* Адрес счётчиков — Worker на Cloudflare, см. worker/README.md.
+     Пока строка пуста, лента живёт как раньше: «Популярное» совпадает
+     с «Новым», и подсказка «i» говорит об этом прямо. */
+  var COUNTS = '';
   var EDIT_URL = 'https://github.com/plairpro/plair/edit/main/games/games.json';
   var API = 'https://api.github.com';
 
@@ -40,6 +44,62 @@
   var SORTS = { fresh: 'New', hot: 'Popular' };
   var order = 'fresh';
   try { if (SORTS[localStorage.getItem('plair-order')]) order = localStorage.getItem('plair-order'); } catch (e) {}
+
+  /* Случайный номер этого браузера. Нужен ровно для двух вещей: не дать
+     накрутить запуски перезагрузкой и не дать лайкнуть дважды. Человека
+     по нему не узнать, за пределы счётчиков он не уходит. */
+  function visitor() {
+    var v = '';
+    try { v = localStorage.getItem('plair-visitor') || ''; } catch (e) {}
+    if (!/^[a-f0-9]{16,64}$/.test(v)) {
+      var a = new Uint8Array(12);
+      (crypto.getRandomValues ? crypto : { getRandomValues: function (x) {
+        for (var i = 0; i < x.length; i++) x[i] = Math.floor(Math.random() * 256);
+      } }).getRandomValues(a);
+      v = [].map.call(a, function (n) { return ('0' + n.toString(16)).slice(-2); }).join('');
+      try { localStorage.setItem('plair-visitor', v); } catch (e) {}
+    }
+    return v;
+  }
+
+  /* Запуск засчитывается не чаще десяти раз в сутки с браузера на игру.
+     Тот же предел стоит и на сервере — здесь он лишь бережёт лишний
+     запрос, полагаться на него одного нельзя. */
+  function mayCount(id) {
+    var key = 'plair-plays', day = new Date().toISOString().slice(0, 10), box = {};
+    try { box = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch (e) {}
+    if (box.day !== day) box = { day: day, n: {} };
+    if ((box.n[id] || 0) >= 10) return false;
+    box.n[id] = (box.n[id] || 0) + 1;
+    try { localStorage.setItem(key, JSON.stringify(box)); } catch (e) {}
+    return true;
+  }
+
+  function countPlay(g) {
+    if (!COUNTS || !g || !g.id || !mayCount(g.id)) return;
+    fetch(COUNTS + '/play', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: g.id, visitor: visitor() }), keepalive: true
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d && d.ok && d.counted) g.plays = d.plays;
+    }).catch(function () {});
+  }
+
+  function loadCounts() {
+    if (!COUNTS) return Promise.resolve(false);
+    return fetch(COUNTS + '/counts')
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || !d.ok) return false;
+        games.forEach(function (g) {
+          var c = d.counts[g.id];
+          if (!c) return;
+          g.plays = c.plays; g.likes = c.likes; g.comments = c.comments;
+        });
+        return true;
+      })
+      .catch(function () { return false; });
+  }
 
   function score(g) {
     return (Number(g.plays) || 0) + 5 * (Number(g.likes) || 0) + 15 * (Number(g.comments) || 0);
@@ -281,8 +341,11 @@
       '&mdash; the ladder follows what each one costs a player: a launch is one tap, a like needs ' +
       'signing in, a comment needs writing something. Age is deliberately not in the formula. ' +
       'Equal scores fall back to the newer game, so the order never shuffles on its own.</p>' +
-      '<p class="g-hint">The counters are not collected yet, so Popular currently matches New. ' +
-      'Nothing about you is counted either way.</p>' +
+      '<p class="g-hint">' + (COUNTS
+        ? 'Launches are counted at most ten times a day from one browser, so a game cannot be ' +
+          'pushed up by reloading. All that is stored is three numbers per game and a random ' +
+          'number your own browser gave itself &mdash; no name, no mail, no cookies.'
+        : 'The counters are not wired up yet, so Popular currently matches New.') + '</p>' +
 
       '<h4>What gets checked</h4>' +
       '<p>The repository exists and is public. You own it. Pages is on. The cover really loads and ' +
@@ -590,6 +653,7 @@
     document.body.style.overflow = 'hidden';
     player = p;
     if (!opts.noHash) history.pushState({ play: g.id }, '', '#play-' + g.id);
+    if (!opts.preview) countPlay(g);
     keepAwake();
 
     var stage = p.querySelector('#stage');
@@ -774,6 +838,12 @@
       games.sort(byDate);
       renderFilters();
       renderFeed();
+      /* Счётчики приезжают следом и ничего не ломают, если не приехали:
+         лента к этому моменту уже стоит на экране. */
+      loadCounts().then(function (got) {
+        if (!got) return;
+        if (order === 'hot') renderFeed();
+      });
     })
     .catch(function () {
       $('feed').innerHTML = '<p class="g-hint bad">The catalogue would not load. Reload the page.</p>';

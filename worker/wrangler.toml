@@ -1,0 +1,12 @@
+name = "plair-counts"
+main = "src/worker.js"
+compatibility_date = "2026-10-12"
+
+# Базу нужно создать один раз и подставить сюда её id:
+#   npx wrangler d1 create plair-counts
+#   npx wrangler d1 execute plair-counts --remote --file=./schema.sql
+#   npx wrangler deploy
+[[d1_databases]]
+binding = "DB"
+database_name = "plair-counts"
+database_id = "ПОДСТАВИТЬ_ID_ИЗ_wrangler_d1_create"
