@@ -9,8 +9,8 @@
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;800&display=swap">
-<link rel="stylesheet" href="/styles.css?v=32">
-<link rel="stylesheet" href="/games/games.css?v=3">
+<link rel="stylesheet" href="/styles.css?v=39">
+<link rel="stylesheet" href="/games/games.css?v=4">
 </head>
 <body>
 <a class="skip-link" href="#feed">Skip to the games</a>
@@ -28,19 +28,12 @@
   </div>
 </header>
 
-<main class="g-shell">
-  <section class="g-intro">
-    <h1>Small web games,<br>by the people who <em>made</em> them.</h1>
-    <p>Publish from a GitHub repository you own. Play anything here without an account.</p>
-    <p class="g-flag"><b>Test build.</b> The checks against GitHub are real: the repository, its owner,
-      the play address and the avatar all come from GitHub itself. Signing in is not wired up yet, so the
-      page takes your word for who you are — until then, publishing ends with a snippet you paste into the
-      catalogue file yourself.</p>
-  </section>
+<p class="g-flag"><b>Test build</b> &mdash; sign-in is not wired up yet.</p>
+<nav class="g-filters" id="filters" aria-label="Filter by genre"></nav>
 
-  <nav class="g-filters" id="filters" aria-label="Filter by genre"></nav>
-  <div class="g-feed" id="feed"><p class="g-hint">Loading the catalogue…</p></div>
+<main class="g-deck" id="feed" tabindex="-1" aria-label="Games">
+  <p class="g-hint" style="margin:40vh auto;text-align:center">Loading the catalogue&hellip;</p>
 </main>
 
-<script src="/games/games.js?v=3" defer></script>
+<script src="/games/games.js?v=4" defer></script>
 </body></html>

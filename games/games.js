@@ -99,34 +99,44 @@
     }).join('') : '';
   }
 
-  function cardHTML(g, i) {
+  function slideHTML(g, i) {
     var mark = String(g.title || '?').trim().slice(0, 1).toUpperCase();
-    return '<article class="g-card">' +
-      '<button class="g-cover' + (g.cover ? '' : ' is-blank') + '" type="button" data-play="' + i +
-        '" aria-label="Play ' + esc(g.title) + '">' +
-        (g.cover
-          ? '<img src="' + esc(g.cover) + '" alt="" loading="lazy" decoding="async">'
-          : '<span class="g-mark" aria-hidden="true">' + esc(mark) + '</span>') +
-        '<span class="g-play">' + ICON_PLAY + 'Play</span></button>' +
-      '<div class="g-body"><h2>' + esc(g.title) + '</h2>' +
-        (g.blurb ? '<p>' + esc(g.blurb) + '</p>' : '') +
-        '<div class="g-tags">' + (g.tags || []).map(function (t) {
-          return '<span class="g-tag">' + esc(t) + '</span>';
-        }).join('') + '</div>' +
-        '<div class="g-meta">' +
-          '<a class="g-author" href="https://github.com/' + esc(g.by) + '" target="_blank" rel="noopener">' +
-            '<img src="' + esc(avatar(g.by)) + '" alt="" loading="lazy"><b>' + esc(g.by) + '</b></a>' +
-          '<span class="g-sp"></span>' +
-          (g.repo ? '<a class="g-src" href="' + esc(g.repo) + '" target="_blank" rel="noopener">Source</a>' : '') +
-        '</div></div></article>';
+    var shot = g.cover
+      /* Два слоя одной картинки: размытая заливает кадр целиком, чёткая
+         вписывается без обрезки — у телефонов экран уже, чем 9:16. */
+      ? '<img class="g-fill" src="' + esc(g.cover) + '" alt="" aria-hidden="true" loading="lazy">' +
+        '<img class="g-shot" src="' + esc(g.cover) + '" alt="" loading="lazy" decoding="async">'
+      : '<div class="g-shot is-blank"><span class="g-mark" aria-hidden="true">' + esc(mark) + '</span></div>';
+    return '<section class="g-slide" aria-label="' + esc(g.title) + '">' +
+      (g.cover ? '<img class="g-back" src="' + esc(g.cover) + '" alt="" aria-hidden="true" loading="lazy">' : '') +
+      '<div class="g-pane">' + shot + '<div class="g-veil"></div>' +
+        '<button class="g-go" type="button" data-play="' + i + '" ' +
+          'aria-label="Play ' + esc(g.title) + '">' + ICON_PLAY + '</button>' +
+        '<div class="g-info"><h2>' + esc(g.title) + '</h2>' +
+          (g.blurb ? '<p>' + esc(g.blurb) + '</p>' : '') +
+          '<div class="g-tags">' + (g.tags || []).map(function (t) {
+            return '<span class="g-tag">' + esc(t) + '</span>';
+          }).join('') + '</div>' +
+          '<div class="g-meta">' +
+            '<a class="g-author" href="https://github.com/' + esc(g.by) + '" target="_blank" rel="noopener">' +
+              '<img src="' + esc(avatar(g.by)) + '" alt="" loading="lazy"><b>' + esc(g.by) + '</b></a>' +
+            '<span class="g-sp"></span>' +
+            (g.repo ? '<a class="g-src" href="' + esc(g.repo) + '" target="_blank" rel="noopener">Source</a>' : '') +
+          '</div></div>' +
+      '</div></section>';
   }
 
+  var SWIPE = '<div class="g-swipe"><svg viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6" ' +
+    'stroke-linecap="round" stroke-linejoin="round"/></svg>Swipe</div>';
+
   function renderFeed() {
+    var deck = $('feed');
+    deck.classList.remove('is-moved');
     var list = games.filter(function (g) {
       return filter === 'All' || (g.tags || []).indexOf(filter) !== -1;
     });
     if (!games.length) {
-      $('feed').innerHTML = '<div class="g-empty"><h2>No games yet</h2>' +
+      deck.innerHTML = '<div class="g-empty"><h2>No games yet</h2>' +
         '<p>The catalogue is empty. Add the first one and it shows up here.</p>' +
         '<button class="button" type="button" id="empty-go">' +
         '<span class="blob" aria-hidden="true"></span><span class="f1">Submit a game</span>' +
@@ -139,9 +149,35 @@
         '</div>';
       return;
     }
-    $('feed').innerHTML = list.length
-      ? list.map(function (g) { return cardHTML(g, games.indexOf(g)); }).join('')
-      : '<p class="g-hint">Nothing tagged &laquo;' + esc(filter) + '&raquo; yet.</p>';
+    if (!list.length) {
+      deck.innerHTML = '<div class="g-empty"><h2>Nothing here yet</h2>' +
+        '<p>No game is tagged &laquo;' + esc(filter) + '&raquo;.</p></div>';
+      return;
+    }
+    deck.innerHTML = list.map(function (g) { return slideHTML(g, games.indexOf(g)); }).join('') +
+      (list.length > 1 ? SWIPE : '');
+    deck.scrollTop = 0;
+  }
+
+  /* Колода листается свайпом, колесом и стрелками. Шаг всегда ровно один
+     экран: scroll-snap сам довезёт до края, нам довольно перевести взгляд
+     на соседний слайд. */
+  function slides() { return [].slice.call($('feed').querySelectorAll('.g-slide')); }
+
+  function current() {
+    var deck = $('feed'), all = slides(), best = 0, min = Infinity;
+    all.forEach(function (s, i) {
+      var d = Math.abs(s.offsetTop - deck.scrollTop);
+      if (d < min) { min = d; best = i; }
+    });
+    return best;
+  }
+
+  function step(dir) {
+    var all = slides();
+    if (!all.length) return;
+    var i = Math.max(0, Math.min(all.length - 1, current() + dir));
+    $('feed').scrollTo({ top: all[i].offsetTop, behavior: 'smooth' });
   }
 
   /* ── панели ──────────────────────────────────────────── */
@@ -619,9 +655,24 @@
   });
 
   document.addEventListener('keydown', function (e) {
-    if (e.key !== 'Escape') return;
-    if (player) quit(); else shut();
+    if (e.key === 'Escape') { if (player) quit(); else shut(); return; }
+    if (player || open) return;
+    var t = e.target;
+    if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+    if (e.key === 'ArrowDown' || e.key === 'PageDown') { e.preventDefault(); step(1); return; }
+    if (e.key === 'ArrowUp' || e.key === 'PageUp') { e.preventDefault(); step(-1); return; }
+    if (e.key === 'Enter' || e.key === ' ') {
+      var all = slides();
+      if (!all.length) return;
+      var go = all[current()].querySelector('[data-play]');
+      if (go) { e.preventDefault(); go.click(); }
+    }
   });
+
+  /* Подсказка «свайпни» уходит, как только лентой воспользовались. */
+  $('feed').addEventListener('scroll', function () {
+    if (this.scrollTop > 24) this.classList.add('is-moved');
+  }, { passive: true });
 
   addEventListener('popstate', function () { if (player) quit(); });
 
