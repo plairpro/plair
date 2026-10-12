@@ -238,6 +238,8 @@
 }
 .g-sheet h3{font-family:var(--display);font-weight:600;letter-spacing:-.03em;font-size:20px;margin:0 0 4px}
 .g-lede{color:var(--muted);font-size:13.5px;margin:0 0 4px}
+.g-step{margin:0 0 6px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  font-weight:600;color:var(--accent)}
 .g-sheet-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px}
 .g-sheet-top .g-sp{flex:1}
 .g-x{flex:none;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:none;

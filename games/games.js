@@ -407,16 +407,25 @@
 
   /* ── имя пользователя ────────────────────────────────── */
 
-  function whoSheet() {
-    var s = sheet('<div class="g-sheet-top"><div><h3>Who are you on GitHub?</h3>' +
-      '<p class="g-lede">So the page can check that a repository you submit is actually yours.</p></div>' +
+  var thenSubmit = false;
+
+  function whoSheet(forSubmit) {
+    thenSubmit = !!forSubmit;
+    var s = sheet('<div class="g-sheet-top"><div>' +
+      (forSubmit
+        ? '<p class="g-step">Add a game &middot; step 1 of 2</p><h3>Who are you on GitHub?</h3>' +
+          '<p class="g-lede">Games are added from your own repositories, so first the page needs ' +
+          'your GitHub name. Next step is the game itself.</p>'
+        : '<h3>Who are you on GitHub?</h3>' +
+          '<p class="g-lede">So the page can check that a repository you submit is actually yours.</p>') +
+      '</div>' +
       '<span class="g-sp"></span>' + X + '</div>' +
       '<label class="g-field"><span>GitHub username</span>' +
         '<input id="w-login" type="text" autocapitalize="none" autocorrect="off" spellcheck="false" ' +
         'placeholder="plairpro" value="' + esc(me ? me.login : '') + '"></label>' +
       '<p class="g-hint" id="w-msg">Sign-in is not built yet, so this is on your honour. It still ' +
         'catches the honest mistake of pasting someone else&rsquo;s repository.</p>' +
-      btn('w-go', 'Save') +
+      btn('w-go', forSubmit ? 'Continue' : 'Save') +
       (me ? '<p class="g-hint"><button class="g-src" type="button" id="w-clear" ' +
         'style="border:0;background:none;cursor:pointer;font:inherit">Forget me on this device</button></p>' : ''));
 
@@ -443,7 +452,7 @@
       }
       me = { login: u.login, name: u.name || u.login };
       saveMe();
-      shut();
+      if (thenSubmit) { thenSubmit = false; submitSheet(true); } else shut();
     }).catch(function (err) {
       msg.className = 'g-hint bad';
       msg.textContent = err.message;
@@ -454,11 +463,18 @@
 
   var found = null;   // {owner, repo, url}
 
-  function submitSheet() {
-    if (!me) { whoSheet(); return; }
+  function submitSheet(stepTwo) {
+    /* Без ника форму не открыть: по нему проверяется, что репозиторий
+       твой. Тогда «+» открывает окно ника как первый шаг добавления —
+       со своим заголовком — и после сохранения сразу ведёт в форму.
+       Раньше окно просто закрывалось, и «+» выглядел копией кнопки
+       кабинета: два значка, одно и то же окно. */
+    if (!me) { whoSheet(true); return; }
     picked = [];
     found = null;
-    var s = sheet('<div class="g-sheet-top"><div><h3>Submit a game</h3>' +
+    var s = sheet('<div class="g-sheet-top"><div>' +
+      (stepTwo === true ? '<p class="g-step">Add a game &middot; step 2 of 2</p>' : '') +
+      '<h3>Add a game</h3>' +
       '<p class="g-lede">Paste a repository you own. The play address comes from GitHub, not from you.</p></div>' +
       '<span class="g-sp"></span>' + X + '</div>' +
       '<label class="g-field"><span>Repository</span>' +
