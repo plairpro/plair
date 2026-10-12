@@ -29,6 +29,24 @@
 
   var games = [];
   var filter = 'All';
+
+  /* Порядок в ленте. По умолчанию — свежие сверху.
+     Популярность: запуск весит единицу, лайк — пять, комментарий —
+     пятнадцать. Лестница отражает цену действия: запуск это одно
+     касание, лайк требует входа, комментарий — ещё и написать.
+     Времени в формуле нет намеренно: каталог маленький, и затухание
+     по возрасту тут только путало бы. Равный счёт разводим по дате,
+     чтобы порядок был устойчивым, а не случайным. */
+  var SORTS = { fresh: 'New', hot: 'Popular' };
+  var order = 'fresh';
+  try { if (SORTS[localStorage.getItem('plair-order')]) order = localStorage.getItem('plair-order'); } catch (e) {}
+
+  function score(g) {
+    return (Number(g.plays) || 0) + 5 * (Number(g.likes) || 0) + 15 * (Number(g.comments) || 0);
+  }
+
+  function byDate(a, b) { return String(b.added).localeCompare(String(a.added)); }
+  function byScore(a, b) { return score(b) - score(a) || byDate(a, b); }
   var me = null;          // {login, name, avatar} — со слов пользователя, проверено у GitHub
   var picked = [];
 
@@ -93,10 +111,20 @@
     var used = {};
     games.forEach(function (g) { (g.tags || []).forEach(function (t) { used[t] = 1; }); });
     var list = ['All'].concat(Object.keys(used).sort());
-    $('filters').innerHTML = list.length > 1 ? list.map(function (t) {
-      return '<button class="g-chip" type="button" data-tag="' + esc(t) + '" aria-pressed="' +
-        (t === filter) + '">' + esc(t) + '</button>';
-    }).join('') : '';
+    if (!games.length) { $('filters').innerHTML = ''; return; }
+    /* Переключатель порядка идёт первым и потому всегда виден: ряд
+       жанров прокручивается, а начинается он именно отсюда. */
+    var sorts = '<div class="g-sort" role="group" aria-label="Order">' +
+      Object.keys(SORTS).map(function (k) {
+        return '<button class="g-sortbtn" type="button" data-order="' + k + '" aria-pressed="' +
+          (k === order) + '">' + SORTS[k] + '</button>';
+      }).join('') + '</div>';
+    var chips = list.length > 1 ? '<span class="g-div" aria-hidden="true"></span>' +
+      list.map(function (t) {
+        return '<button class="g-chip" type="button" data-tag="' + esc(t) + '" aria-pressed="' +
+          (t === filter) + '">' + esc(t) + '</button>';
+      }).join('') : '';
+    $('filters').innerHTML = sorts + chips;
   }
 
   function slideHTML(g, i, pos) {
@@ -139,7 +167,7 @@
     deck.classList.remove('is-moved');
     var list = games.filter(function (g) {
       return filter === 'All' || (g.tags || []).indexOf(filter) !== -1;
-    });
+    }).sort(order === 'hot' ? byScore : byDate);
     if (!games.length) {
       deck.innerHTML = '<div class="g-empty"><h2>No games yet</h2>' +
         '<p>The catalogue is empty. Add the first one and it shows up here.</p>' +
@@ -246,6 +274,15 @@
         '<li>Copy what the form builds and paste it into the catalogue file on GitHub. ' +
           'Your card shows up about a minute later.</li>' +
       '</ol>' +
+
+      '<h4>How the feed is ordered</h4>' +
+      '<p><b>New</b> is the default: whatever was added last comes first. ' +
+      '<b>Popular</b> scores each game as <code>plays + 5 &times; likes + 15 &times; comments</code> ' +
+      '&mdash; the ladder follows what each one costs a player: a launch is one tap, a like needs ' +
+      'signing in, a comment needs writing something. Age is deliberately not in the formula. ' +
+      'Equal scores fall back to the newer game, so the order never shuffles on its own.</p>' +
+      '<p class="g-hint">The counters are not collected yet, so Popular currently matches New. ' +
+      'Nothing about you is counted either way.</p>' +
 
       '<h4>What gets checked</h4>' +
       '<p>The repository exists and is public. You own it. Pages is on. The cover really loads and ' +
@@ -635,11 +672,16 @@
 
   document.addEventListener('click', function (e) {
     var el = e.target.closest && e.target.closest(
-      '[data-tag],[data-play],[data-pick],[data-close],[data-quit],[data-full],[data-more],' +
+      '[data-tag],[data-order],[data-play],[data-pick],[data-close],[data-quit],[data-full],[data-more],' +
       '#how,#who,#submit-open,#empty-go,#empty-how,#w-go,#w-clear,#f-go,#f-copy,#f-try');
     if (!el) return;
 
     if (el.dataset.tag) { filter = el.dataset.tag; renderFilters(); renderFeed(); return; }
+    if (el.dataset.order) {
+      order = el.dataset.order;
+      try { localStorage.setItem('plair-order', order); } catch (e) {}
+      renderFilters(); renderFeed(); return;
+    }
     if (el.dataset.more !== undefined) {
       var box = el.closest('.g-info');
       var on = box.classList.toggle('is-open');
@@ -729,7 +771,7 @@
     .then(function (r) { return r.ok ? r.json() : []; })
     .then(function (list) {
       games = Array.isArray(list) ? list : [];
-      games.sort(function (a, b) { return String(b.added).localeCompare(String(a.added)); });
+      games.sort(byDate);
       renderFilters();
       renderFeed();
     })
