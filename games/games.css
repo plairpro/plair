@@ -2,6 +2,9 @@
    здесь только то, чего на остальном сайте нет. */
 
 .g-shell{max-width:620px;margin:0 auto;padding-inline:16px}
+/* Шапка не держится колонки: значок прижат к левому краю, кнопки — к
+   правому, как у обычного приложения. */
+.g-top .g-shell{max-width:none;padding-inline:clamp(16px,3vw,34px)}
 
 /* ── шапка ──────────────────────────────────────────────── */
  /* Шапка и фильтр лежат поверх колоды: экран целиком отдан игре. */
@@ -13,7 +16,7 @@
 .g-brand{display:flex;align-items:center;gap:9px;text-decoration:none;flex:none}
 .g-brand .logo{width:clamp(62px,17vw,84px)}
 .g-brand span{font-family:var(--display);font-weight:600;font-size:11px;letter-spacing:.2em;
-  color:var(--dim);text-transform:uppercase;padding-top:2px}
+  color:var(--accent);text-transform:uppercase}
 .g-top .g-sp{flex:1;min-width:0}
 /* Кнопка «Связь» с общего сайта шире, чем нужно в этой шапке. */
 .g-top .button{min-width:0;padding:9px 18px 9px 30px;min-height:40px}
@@ -41,27 +44,19 @@
   .g-top .button .blob{left:12px}
 }
 
-/* ── плашка «тестовая сборка» ───────────────────────────── */
-.g-flag{position:fixed;z-index:39;left:50%;transform:translateX(-50%);
-  top:calc(70px + env(safe-area-inset-top,0px));
-  max-width:min(620px,calc(100vw - 40px));margin:0;padding:6px 14px;
-  border:1px dashed rgba(255,255,255,.3);border-radius:999px;
-  background:rgba(6,8,6,.5);backdrop-filter:blur(10px);
-  color:rgba(255,255,255,.7);font-size:12px;line-height:1.3;text-align:center}
-.g-flag b{color:#fff;font-weight:600}
-
 /* ── фильтр ─────────────────────────────────────────────── */
 .g-filters{position:fixed;z-index:39;left:0;right:0;
-  top:calc(126px + env(safe-area-inset-top,0px));
+  top:calc(68px + env(safe-area-inset-top,0px));
   display:flex;gap:8px;overflow-x:auto;padding:0 16px;scrollbar-width:none;
   justify-content:flex-start}
 @media (min-width:760px){
-  .g-filters{justify-content:center;top:calc(110px + env(safe-area-inset-top,0px))}
+  .g-filters{justify-content:flex-start;top:calc(70px + env(safe-area-inset-top,0px))}
 }
 .g-filters::-webkit-scrollbar{display:none}
-.g-chip{flex:none;min-height:34px;padding:6px 14px;border-radius:999px;
-  border:1px solid rgba(255,255,255,.22);
-  background:rgba(6,8,6,.55);backdrop-filter:blur(10px);color:rgba(255,255,255,.82);font:inherit;font-size:13px;font-weight:500;
+.g-chip{flex:none;min-height:26px;padding:3px 10px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.2);
+  background:rgba(6,8,6,.5);backdrop-filter:blur(10px);color:rgba(255,255,255,.78);
+  font:inherit;font-size:11.5px;font-weight:500;
   cursor:pointer;transition:.18s}
 .g-chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--on-accent)}
 
@@ -140,12 +135,12 @@
 @keyframes g-bob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(7px)}}
 
 @media (min-width:760px){
-  .g-slide{--pane-w:min(430px,calc((100dvh - 196px) * 0.5625))}
-  .g-pane{height:calc(100% - 196px);align-self:flex-start;margin-top:156px;
+  .g-slide{--pane-w:min(430px,calc((100dvh - 150px) * 0.5625))}
+  .g-pane{height:calc(100% - 150px);align-self:flex-start;margin-top:112px;
     border-radius:20px;box-shadow:0 30px 90px rgba(0,0,0,.6)}
   /* Кадр на десктопе сдвинут вниз и укорочен, поэтому центр кнопки
      считаем от кадра, а не от экрана. */
-  .g-swipe{top:calc(156px + (100dvh - 196px) / 2 + 56px)}
+  .g-swipe{top:calc(112px + (100dvh - 150px) / 2 + 56px)}
 }
 /* На невысоком десктопном окне кадр короткий, подпись поднимается к
    кнопке, и подсказке просто негде встать — там она лишняя: колоду

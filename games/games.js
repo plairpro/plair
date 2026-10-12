@@ -223,7 +223,8 @@
 
   function howSheet() {
     sheet('<div class="g-sheet-top"><div><h3>How to add a game</h3>' +
-      '<p class="g-lede">Four steps, and about ten minutes the first time.</p></div>' +
+      '<p class="g-lede">Four steps, and about ten minutes the first time. ' +
+        'This is a test build: the GitHub checks are real, signing in is not wired up yet.</p></div>' +
       '<span class="g-sp"></span>' + X + '</div>' +
       '<div class="g-doc">' +
 
@@ -232,8 +233,9 @@
         '<li>It <b>runs in a browser</b>. No downloads, no installers, no store links.</li>' +
         '<li>It lives in a <b>public repository you own</b> on GitHub, with Pages turned on ' +
           '(Settings &rarr; Pages &rarr; pick a branch).</li>' +
-        '<li>There is a <b>cover image</b> in that repository: landscape, at least 800px across. ' +
-          'A screenshot of the game itself works better than a logo.</li>' +
+        '<li>There is a <b>cover image</b> in that repository: upright, at least 720px across, ' +
+          '9:16 fits the screen exactly. Shoot it <b>inside</b> the game, not on the title ' +
+          'screen &mdash; a start button under our Play button reads as a mess.</li>' +
       '</ul>' +
 
       '<h4>Then</h4>' +
@@ -247,7 +249,7 @@
 
       '<h4>What gets checked</h4>' +
       '<p>The repository exists and is public. You own it. Pages is on. The cover really loads and ' +
-        'is wider than it is tall. The play address is read from GitHub, not typed by you &mdash; ' +
+        'is upright. The play address is read from GitHub, not typed by you &mdash; ' +
         'a custom domain is picked up from the repository&rsquo;s own <code>CNAME</code> file.</p>' +
 
       '<h4>Worth knowing</h4>' +
@@ -425,19 +427,21 @@
     var msg = $('f-cover-msg'), v = $('f-cover').value.trim();
     if (!v) {
       msg.className = 'g-hint';
-      msg.textContent = 'Wider than it is tall, at least 800px across. Keep it in your own repository.';
+      msg.textContent = 'Portrait, at least 720px across. A screenshot from inside the game, ' +
+        'not the title screen. Keep it in your own repository.';
       return;
     }
     msg.className = 'g-hint busy';
     msg.textContent = 'Loading the image…';
     var img = new Image();
     img.onload = function () {
-      if (img.naturalWidth < img.naturalHeight) {
+      if (img.naturalWidth > img.naturalHeight) {
         msg.className = 'g-hint bad';
-        msg.textContent = 'That image is taller than it is wide. Covers are landscape.';
-      } else if (img.naturalWidth < 800) {
+        msg.textContent = 'That image is wider than it is tall. The feed is full-screen and ' +
+          'upright, so covers are portrait — 9:16 fits exactly.';
+      } else if (img.naturalWidth < 720) {
         msg.className = 'g-hint bad';
-        msg.textContent = 'Only ' + img.naturalWidth + 'px across. It will look soft — use 800 or more.';
+        msg.textContent = 'Only ' + img.naturalWidth + 'px across. It will look soft — use 720 or more.';
       } else {
         msg.className = 'g-hint good';
         msg.textContent = 'Loads fine, ' + img.naturalWidth + '×' + img.naturalHeight + '.';
