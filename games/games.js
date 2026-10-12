@@ -362,7 +362,7 @@
       '<h4>Then</h4>' +
       '<ol>' +
         '<li>Tell the page your GitHub username.</li>' +
-        '<li>Press <b>Submit</b> and paste the address of your repository.</li>' +
+        '<li>Press the green <b>+</b> at the top right and paste the address of your repository.</li>' +
         '<li>Fill in the title, one line about it, and up to five genres.</li>' +
         '<li>Copy what the form builds and paste it into the catalogue file on GitHub. ' +
           'Your card shows up about a minute later.</li>' +

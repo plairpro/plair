@@ -28,13 +28,18 @@
 .g-brand span{font-family:var(--display);font-weight:600;font-size:11px;letter-spacing:.2em;
   color:var(--accent);text-transform:uppercase}
 .g-top .g-sp{flex:1;min-width:0}
-/* Кнопка «Связь» с общего сайта шире, чем нужно в этой шапке. */
-.g-top .button{min-width:0;padding:9px 18px 9px 30px;min-height:40px}
+
 
 .g-round{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--line-2);
   background:none;color:var(--muted);display:grid;place-items:center;cursor:pointer;
   font-family:var(--display);font-weight:600;font-size:15px;line-height:1;transition:.2s}
 .g-round:hover{color:var(--ink);border-color:var(--ink)}
+/* «Добавить игру» — зелёное кольцо и зелёный плюс, тот же язык, что у
+   Play в ленте. Заменил широкую кнопку Submit: с поиском шапка на
+   телефоне перестала влезать. */
+.g-add{border-color:var(--accent);color:var(--accent)}
+.g-add svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2}
+.g-add:hover{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 
 /* ── поиск ──────────────────────────────────────────────── */
 /* На десктопе поле стоит по центру шапки. На телефоне места нет —
@@ -68,23 +73,19 @@
   .g-top.is-searching .g-top-in > :not(.g-qslot){visibility:hidden}
 }
 
-.g-who{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:5px 6px;
-  border-radius:999px;border:1px solid var(--line-2);background:none;color:var(--muted);
-  font-size:13.5px;font-weight:500;white-space:nowrap;cursor:pointer;transition:.2s;
-  min-width:40px;justify-content:center}
+/* Кабинет — круглая кнопка со значком, без подписи: имя видно в окне,
+   которое она открывает, а в шапке на подпись нет места. */
+.g-who{flex:none;display:grid;place-items:center;width:40px;height:40px;padding:0;
+  border-radius:50%;border:1px solid var(--line-2);background:none;color:var(--muted);
+  cursor:pointer;transition:.2s}
 .g-who:hover{color:var(--ink);border-color:var(--ink)}
 .g-who img,.g-who svg{width:24px;height:24px;border-radius:50%;flex:none;display:block}
 .g-who svg{border-radius:0;fill:none;stroke:currentColor;stroke-width:1.7}
-.g-who b{font-weight:500;padding-right:7px}
-/* Шапка ужимается ступенями: сначала уходит подпись у имени, потом слово
-   GAMES у логотипа, потом поля у кнопки. На 320 точках всё ещё влезает. */
-@media (max-width:539px){ .g-who b{display:none} }
-@media (max-width:419px){ .g-brand span{display:none} }
-@media (max-width:359px){
-  .g-top-in{gap:6px}
-  .g-top .button{padding:9px 14px 9px 26px}
-  .g-top .button .blob{left:12px}
-}
+.g-who b{display:none}
+/* Шапка ужимается ступенями: на узком телефоне уходит слово GAMES у
+   логотипа, на самом узком — чуть сжимаются промежутки. */
+@media (max-width:369px){ .g-brand span{display:none} }
+@media (max-width:359px){ .g-top-in,.g-acts{gap:6px} }
 
 /* ── фильтр ─────────────────────────────────────────────── */
 .g-filters{position:fixed;z-index:39;left:0;right:0;
