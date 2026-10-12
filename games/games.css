@@ -93,34 +93,36 @@
 /* Затемнение снизу — чтобы подпись читалась на любой обложке. */
 .g-veil{position:absolute;inset:0;z-index:1;pointer-events:none;
   background:linear-gradient(180deg,rgba(6,8,6,.72) 0%,rgba(6,8,6,.12) 22%,
-    rgba(6,8,6,.12) 38%,rgba(6,8,6,.72) 62%,rgba(6,8,6,.94) 84%,rgba(6,8,6,.97) 100%)}
+    rgba(6,8,6,.1) 44%,rgba(6,8,6,.6) 70%,rgba(6,8,6,.92) 88%,rgba(6,8,6,.96) 100%)}
 .g-go{position:absolute;z-index:3;left:50%;top:50%;transform:translate(-50%,-50%);
-  width:96px;height:96px;border-radius:50%;border:0;cursor:pointer;
+  width:66px;height:66px;border-radius:50%;border:0;cursor:pointer;
   background:var(--accent);color:var(--on-accent);display:grid;place-items:center;
-  box-shadow:0 18px 50px rgba(0,0,0,.5);transition:transform .18s ease}
-.g-go svg{width:34px;height:34px;fill:currentColor;margin-left:5px}
+  box-shadow:0 14px 38px rgba(0,0,0,.5);transition:transform .18s ease}
+.g-go svg{width:24px;height:24px;fill:currentColor;margin-left:3px}
 .g-go:hover{transform:translate(-50%,-50%) scale(1.06)}
 .g-go:active{transform:translate(-50%,-50%) scale(.96)}
 .g-go:focus-visible{outline:3px solid var(--ink);outline-offset:4px}
-.g-info{position:relative;z-index:2;padding:0 18px calc(34px + env(safe-area-inset-bottom,0px));
+.g-info{position:relative;z-index:2;padding:0 16px calc(20px + env(safe-area-inset-bottom,0px));
   max-width:34rem}
 .g-info h2{font-family:var(--display);font-weight:600;letter-spacing:-.035em;
-  font-size:clamp(23px,6vw,30px);line-height:1.08;margin:0;color:#fff;
-  text-shadow:0 2px 14px rgba(0,0,0,.55)}
-.g-info p{color:rgba(255,255,255,.82);font-size:14px;line-height:1.45;margin:8px 0 0;
-  text-shadow:0 1px 10px rgba(0,0,0,.5)}
-.g-slide .g-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
-.g-slide .g-tag{font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;
-  color:rgba(255,255,255,.78);border:1px solid rgba(255,255,255,.26);
-  border-radius:999px;padding:3px 9px;backdrop-filter:blur(6px)}
-.g-slide .g-meta{display:flex;align-items:center;gap:10px;margin-top:14px;border:0;padding:0}
-.g-slide .g-author{color:rgba(255,255,255,.8)}
-.g-slide .g-author b{color:#fff}
-.g-slide .g-src{color:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.26);
-  border-radius:999px;padding:4px 11px;font-size:12px}
+  font-size:clamp(18px,4.6vw,22px);line-height:1.12;margin:0;color:#fff;
+  text-shadow:0 2px 12px rgba(0,0,0,.6)}
+.g-info p{color:rgba(255,255,255,.8);font-size:12.5px;line-height:1.4;margin:5px 0 0;
+  text-shadow:0 1px 9px rgba(0,0,0,.55)}
+.g-slide .g-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.g-slide .g-tag{font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;font-weight:600;
+  color:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.22);
+  border-radius:999px;padding:2px 7px;backdrop-filter:blur(6px)}
+.g-slide .g-meta{display:flex;align-items:center;gap:12px;margin-top:9px;border:0;padding:0}
+.g-slide .g-author{color:rgba(255,255,255,.85);font-size:12px;font-weight:500;
+  text-decoration:none;white-space:nowrap}
+.g-slide .g-author:hover{color:var(--accent)}
+.g-slide .g-meta .g-sp{flex:1}
+.g-slide .g-src{color:rgba(255,255,255,.6);font-size:11.5px;text-decoration:none;
+  border-bottom:1px solid rgba(255,255,255,.3);padding-bottom:1px}
 .g-slide .g-src:hover{color:#fff;border-color:#fff}
 /* Подсказка о свайпе — только на первом экране и только до первого листания. */
-.g-swipe{position:fixed;z-index:3;left:50%;top:calc(50% + 74px);
+.g-swipe{position:fixed;z-index:3;left:50%;top:calc(50% + 56px);
   transform:translateX(-50%);display:flex;flex-direction:column-reverse;align-items:center;gap:3px;
   color:rgba(255,255,255,.7);font-size:12px;letter-spacing:.08em;text-transform:uppercase;
   pointer-events:none;animation:g-bob 1.9s ease-in-out infinite}
@@ -134,7 +136,7 @@
     border-radius:20px;box-shadow:0 30px 90px rgba(0,0,0,.6)}
   /* Кадр на десктопе сдвинут вниз и укорочен, поэтому центр кнопки
      считаем от кадра, а не от экрана. */
-  .g-swipe{top:calc(156px + (100dvh - 196px) / 2 + 74px)}
+  .g-swipe{top:calc(156px + (100dvh - 196px) / 2 + 56px)}
 }
 /* На невысоком десктопном окне кадр короткий, подпись поднимается к
    кнопке, и подсказке просто негде встать — там она лишняя: колоду

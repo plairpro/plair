@@ -122,8 +122,8 @@
             return '<span class="g-tag">' + esc(t) + '</span>';
           }).join('') + '</div>' +
           '<div class="g-meta">' +
-            '<a class="g-author" href="https://github.com/' + esc(g.by) + '" target="_blank" rel="noopener">' +
-              '<img src="' + esc(avatar(g.by)) + '" alt="" loading="lazy"><b>' + esc(g.by) + '</b></a>' +
+            '<a class="g-author" href="https://github.com/' + esc(g.by) + '" target="_blank" rel="noopener">@' +
+              esc(g.by) + '</a>' +
             '<span class="g-sp"></span>' +
             (g.repo ? '<a class="g-src" href="' + esc(g.repo) + '" target="_blank" rel="noopener">Source</a>' : '') +
           '</div></div>' +

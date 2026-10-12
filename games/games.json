@@ -3,7 +3,12 @@
     "id": "memsbox",
     "title": "Мемные арканы",
     "blurb": "Rip seals, collect thirty-six internet memes drawn as tarot cards.",
-    "tags": ["Card", "Roguelike", "Casual", "Experimental"],
+    "tags": [
+      "Card",
+      "Roguelike",
+      "Casual",
+      "Experimental"
+    ],
     "cover": "/games/covers/memsbox.webp",
     "url": "https://plairpro.github.io/memsbox/",
     "repo": "https://github.com/plairpro/memsbox",
@@ -14,7 +19,12 @@
     "id": "shift",
     "title": "Сдвиг",
     "blurb": "Tactical robot duel. Push, pull, combo — knock three off the collapsing arena.",
-    "tags": ["Strategy", "Puzzle", "Multiplayer", "Physics"],
+    "tags": [
+      "Strategy",
+      "Puzzle",
+      "Multiplayer",
+      "Physics"
+    ],
     "cover": "/games/covers/shift.webp",
     "url": "https://plairpro.github.io/shift/",
     "repo": "https://github.com/plairpro/shift",
@@ -22,21 +32,15 @@
     "added": "2026-10-07"
   },
   {
-    "id": "pochtatech",
-    "title": "Верные решения",
-    "blurb": "A delivery rover runs the street while you pick the right answer at speed.",
-    "tags": ["Runner", "Education", "Arcade", "Casual"],
-    "cover": "/games/covers/pochtatech.webp",
-    "url": "https://plairpro.github.io/pochtatech/",
-    "repo": "https://github.com/plairpro/pochtatech",
-    "by": "plairpro",
-    "added": "2026-10-06"
-  },
-  {
     "id": "office",
     "title": "Офис",
     "blurb": "Two to four colleagues brawl in the open-plan. Staplers, mops, coffee.",
-    "tags": ["Multiplayer", "Arcade", "Casual", "Physics"],
+    "tags": [
+      "Multiplayer",
+      "Arcade",
+      "Casual",
+      "Physics"
+    ],
     "cover": "/games/covers/office.webp",
     "url": "https://plairpro.github.io/office/",
     "repo": "https://github.com/plairpro/office",
@@ -47,7 +51,12 @@
     "id": "rover",
     "title": "Путь знаний",
     "blurb": "The same rover, a school run: catch the right answers, dodge the wrong ones.",
-    "tags": ["Runner", "Education", "Arcade", "Casual"],
+    "tags": [
+      "Runner",
+      "Education",
+      "Arcade",
+      "Casual"
+    ],
     "cover": "/games/covers/rover.webp",
     "url": "https://plairpro.github.io/rover/dist/",
     "repo": "https://github.com/plairpro/rover",
@@ -58,7 +67,12 @@
     "id": "scrollprincess",
     "title": "Принцесса Скролл",
     "blurb": "Climb a tower of danger with nothing but the scroll of your thumb.",
-    "tags": ["Platformer", "Arcade", "Atmospheric", "Casual"],
+    "tags": [
+      "Platformer",
+      "Arcade",
+      "Atmospheric",
+      "Casual"
+    ],
     "cover": "/games/covers/scrollprincess.webp",
     "url": "https://plairpro.github.io/scrollprincess/",
     "repo": "https://github.com/plairpro/scrollprincess",
@@ -69,22 +83,16 @@
     "id": "dron",
     "title": "Дрон",
     "blurb": "Fly an armoured industrial drone deep into a dark cave. One tap lifts you.",
-    "tags": ["Simulation", "Atmospheric", "Arcade", "Experimental"],
+    "tags": [
+      "Simulation",
+      "Atmospheric",
+      "Arcade",
+      "Experimental"
+    ],
     "cover": "/games/covers/dron.webp",
     "url": "https://plairpro.github.io/dron/",
     "repo": "https://github.com/plairpro/dron",
     "by": "plairpro",
     "added": "2026-09-29"
-  },
-  {
-    "id": "digitaldiamond",
-    "title": "Цифровой алмаз",
-    "blurb": "A retro LCD handheld: the claw catches diamonds before they shatter.",
-    "tags": ["Arcade", "Casual", "Experimental"],
-    "cover": "/games/covers/digitaldiamond.webp",
-    "url": "https://plairpro.github.io/digitaldiamond/",
-    "repo": "https://github.com/plairpro/digitaldiamond",
-    "by": "plairpro",
-    "added": "2026-09-25"
   }
 ]
