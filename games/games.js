@@ -127,8 +127,6 @@
           '<div class="g-meta">' +
             '<a class="g-author" href="https://github.com/' + esc(g.by) + '" target="_blank" rel="noopener">@' +
               esc(g.by) + '</a>' +
-            '<span class="g-sp"></span>' +
-            (g.repo ? '<a class="g-src" href="' + esc(g.repo) + '" target="_blank" rel="noopener">Source</a>' : '') +
           '</div></div>' +
       '</div></section>';
   }
@@ -609,10 +607,20 @@
     } catch (e) { /* не дали — играем как есть */ }
   }
 
+  /* Кадр игры гасим раньше, чем убираем: пустой src обрывает звук сразу,
+     а удаление узла на части движков оставляет его доигрывать. */
+  function killFrames(root) {
+    [].forEach.call((root || document).querySelectorAll('iframe'), function (f) {
+      try { f.src = 'about:blank'; } catch (e) {}
+      f.remove();
+    });
+  }
+
   function quit() {
     if (!player) return;
     try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {}
     if (wake) { try { wake.release(); } catch (e) {} wake = null; }
+    killFrames(player);
     player.remove();
     player = null;
     if (!open) document.body.style.overflow = '';
@@ -698,10 +706,17 @@
   /* Подсказка «свайпни» уходит, как только лентой воспользовались. */
   $('feed').addEventListener('scroll', function () {
     if (this.scrollTop > 24) this.classList.add('is-moved');
+    /* В ленте звучать нечему. Если проигрыватель закрыт, а кадр игры
+       почему-то жив, — сносим: листать ленту под чужую музыку нельзя. */
+    if (!player) killFrames(document);
     warm();
   }, { passive: true });
 
   addEventListener('popstate', function () { if (player) quit(); });
+
+  /* Уходим со страницы — звук игры уходит с нами. На переключение
+     вкладки не трогаем: человек вернётся к своей партии. */
+  addEventListener('pagehide', function () { if (player) killFrames(player); });
 
   /* ── старт ───────────────────────────────────────────── */
 

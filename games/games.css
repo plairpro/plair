@@ -129,10 +129,7 @@
 .g-slide .g-author{color:rgba(255,255,255,.85);font-size:12px;font-weight:500;
   text-decoration:none;white-space:nowrap}
 .g-slide .g-author:hover{color:var(--accent)}
-.g-slide .g-meta .g-sp{flex:1}
-.g-slide .g-src{color:rgba(255,255,255,.6);font-size:11.5px;text-decoration:none;
-  border-bottom:1px solid rgba(255,255,255,.3);padding-bottom:1px}
-.g-slide .g-src:hover{color:#fff;border-color:#fff}
+.g-slide .g-src{display:none}
 /* Подсказка о свайпе — только на первом экране и только до первого листания. */
 .g-swipe{position:fixed;z-index:3;left:50%;top:calc(50% + 56px);
   transform:translateX(-50%);display:flex;flex-direction:column-reverse;align-items:center;gap:3px;
