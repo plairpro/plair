@@ -50,7 +50,11 @@
   display:flex;gap:8px;overflow-x:auto;padding:0 16px;scrollbar-width:none;
   justify-content:flex-start}
 @media (min-width:760px){
-  .g-filters{justify-content:flex-start;top:calc(70px + env(safe-area-inset-top,0px))}
+  .g-filters{top:calc(70px + env(safe-area-inset-top,0px))}
+  /* Ряд жанров стоит по центру, пока влезает. Распорки с margin:auto
+     вместо justify-content:center — иначе при переполнении начало ряда
+     уезжает за левый край и до него уже не долистать. */
+  .g-filters::before,.g-filters::after{content:"";margin:auto}
 }
 .g-filters::-webkit-scrollbar{display:none}
 .g-chip{flex:none;min-height:26px;padding:3px 10px;border-radius:999px;
