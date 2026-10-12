@@ -99,16 +99,20 @@
     }).join('') : '';
   }
 
-  function slideHTML(g, i) {
+  function slideHTML(g, i, pos) {
+    /* Первый экран грузим сразу: в ленте со свайпом браузер считает
+       слайды «за кадром» и ленивую картинку не запрашивает вовсе,
+       поэтому стартовая обложка иначе остаётся пустой. */
+    var lazy = pos === 0 ? 'eager" fetchpriority="high' : 'lazy';
     var mark = String(g.title || '?').trim().slice(0, 1).toUpperCase();
     var shot = g.cover
       /* Два слоя одной картинки: размытая заливает кадр целиком, чёткая
          вписывается без обрезки — у телефонов экран уже, чем 9:16. */
-      ? '<img class="g-fill" src="' + esc(g.cover) + '" alt="" aria-hidden="true" loading="lazy">' +
-        '<img class="g-shot" src="' + esc(g.cover) + '" alt="" loading="lazy" decoding="async">'
+      ? '<img class="g-fill" src="' + esc(g.cover) + '" alt="" aria-hidden="true" loading="' + lazy + '">' +
+        '<img class="g-shot" src="' + esc(g.cover) + '" alt="" loading="' + lazy + '" decoding="async">'
       : '<div class="g-shot is-blank"><span class="g-mark" aria-hidden="true">' + esc(mark) + '</span></div>';
     return '<section class="g-slide" aria-label="' + esc(g.title) + '">' +
-      (g.cover ? '<img class="g-back" src="' + esc(g.cover) + '" alt="" aria-hidden="true" loading="lazy">' : '') +
+      (g.cover ? '<img class="g-back" src="' + esc(g.cover) + '" alt="" aria-hidden="true" loading="' + lazy + '">' : '') +
       '<div class="g-pane">' + shot + '<div class="g-veil"></div>' +
         '<button class="g-go" type="button" data-play="' + i + '" ' +
           'aria-label="Play ' + esc(g.title) + '">' + ICON_PLAY + '</button>' +
@@ -154,9 +158,10 @@
         '<p>No game is tagged &laquo;' + esc(filter) + '&raquo;.</p></div>';
       return;
     }
-    deck.innerHTML = list.map(function (g) { return slideHTML(g, games.indexOf(g)); }).join('') +
+    deck.innerHTML = list.map(function (g, pos) { return slideHTML(g, games.indexOf(g), pos); }).join('') +
       (list.length > 1 ? SWIPE : '');
     deck.scrollTop = 0;
+    warm();
   }
 
   /* Колода листается свайпом, колесом и стрелками. Шаг всегда ровно один
@@ -669,9 +674,22 @@
     }
   });
 
+  /* Соседние обложки подтягиваем сами: браузер в этой ленте ленивые
+     картинки запрашивает с опозданием, и следующая игра встречала
+     пустым экраном. Два слайда вперёд — запас на быстрый свайп. */
+  function warm() {
+    var all = slides(), at = current();
+    for (var i = at; i <= at + 2 && i < all.length; i++) {
+      [].forEach.call(all[i].querySelectorAll('img[loading="lazy"]'), function (im) {
+        im.loading = 'eager';
+      });
+    }
+  }
+
   /* Подсказка «свайпни» уходит, как только лентой воспользовались. */
   $('feed').addEventListener('scroll', function () {
     if (this.scrollTop > 24) this.classList.add('is-moved');
+    warm();
   }, { passive: true });
 
   addEventListener('popstate', function () { if (player) quit(); });
