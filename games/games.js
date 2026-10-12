@@ -116,10 +116,13 @@
       '<div class="g-pane">' + shot + '<div class="g-veil"></div>' +
         '<button class="g-go" type="button" data-play="' + i + '" ' +
           'aria-label="Play ' + esc(g.title) + '">' + ICON_PLAY + '</button>' +
+        /* Подпись свёрнута: на телефоне описание и жанры съедали треть
+           экрана, а смотреть пришли на игру. Разворачивается тапом. */
         '<div class="g-info"><h2>' + esc(g.title) + '</h2>' +
-          (g.blurb ? '<p>' + esc(g.blurb) + '</p>' : '') +
-          '<div class="g-tags">' + (g.tags || []).map(function (t) {
-            return '<span class="g-tag">' + esc(t) + '</span>';
+          (g.blurb ? '<button class="g-blurb" type="button" data-more ' +
+            'aria-expanded="false">' + esc(g.blurb) + '</button>' : '') +
+          '<div class="g-tags">' + (g.tags || []).map(function (t, n) {
+            return '<span class="g-tag' + (n > 2 ? ' is-extra' : '') + '">' + esc(t) + '</span>';
           }).join('') + '</div>' +
           '<div class="g-meta">' +
             '<a class="g-author" href="https://github.com/' + esc(g.by) + '" target="_blank" rel="noopener">@' +
@@ -620,11 +623,17 @@
 
   document.addEventListener('click', function (e) {
     var el = e.target.closest && e.target.closest(
-      '[data-tag],[data-play],[data-pick],[data-close],[data-quit],[data-full],' +
+      '[data-tag],[data-play],[data-pick],[data-close],[data-quit],[data-full],[data-more],' +
       '#how,#who,#submit-open,#empty-go,#empty-how,#w-go,#w-clear,#f-go,#f-copy,#f-try');
     if (!el) return;
 
     if (el.dataset.tag) { filter = el.dataset.tag; renderFilters(); renderFeed(); return; }
+    if (el.dataset.more !== undefined) {
+      var box = el.closest('.g-info');
+      var on = box.classList.toggle('is-open');
+      el.setAttribute('aria-expanded', on ? 'true' : 'false');
+      return;
+    }
     if (el.dataset.play !== undefined) { play(games[Number(el.dataset.play)]); return; }
     if (el.dataset.quit !== undefined) { quit(); return; }
     if (el.dataset.full !== undefined) { goFull(); return; }

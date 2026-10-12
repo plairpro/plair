@@ -107,13 +107,25 @@
 .g-info h2{font-family:var(--display);font-weight:600;letter-spacing:-.035em;
   font-size:clamp(18px,4.6vw,22px);line-height:1.12;margin:0;color:#fff;
   text-shadow:0 2px 12px rgba(0,0,0,.6)}
-.g-info p{color:rgba(255,255,255,.8);font-size:12.5px;line-height:1.4;margin:5px 0 0;
+/* Описание свёрнуто в одну строку; тап разворачивает. Это кнопка, а не
+   абзац, — чтобы работала с клавиатуры и читалась скринридером. */
+.g-blurb{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;
+  width:100%;text-align:left;border:0;background:none;padding:0;cursor:pointer;
+  font:inherit;color:rgba(255,255,255,.78);font-size:12px;line-height:1.4;margin:4px 0 0;
   text-shadow:0 1px 9px rgba(0,0,0,.55)}
-.g-slide .g-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.g-info.is-open .g-blurb{-webkit-line-clamp:4}
+.g-blurb::after{content:" \25BE";color:rgba(255,255,255,.55)}
+.g-info.is-open .g-blurb::after{content:" \25B4"}
+.g-blurb:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+/* На экране видны три жанра, остальные приезжают вместе с описанием —
+   четыре подряд уносили подпись на вторую строку. */
+.g-slide .g-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.g-slide .g-tag.is-extra{display:none}
+.g-info.is-open .g-tag.is-extra{display:inline}
 .g-slide .g-tag{font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;font-weight:600;
   color:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.22);
   border-radius:999px;padding:2px 7px;backdrop-filter:blur(6px)}
-.g-slide .g-meta{display:flex;align-items:center;gap:12px;margin-top:9px;border:0;padding:0}
+.g-slide .g-meta{display:flex;align-items:center;gap:12px;margin-top:8px;border:0;padding:0}
 .g-slide .g-author{color:rgba(255,255,255,.85);font-size:12px;font-weight:500;
   text-decoration:none;white-space:nowrap}
 .g-slide .g-author:hover{color:var(--accent)}
