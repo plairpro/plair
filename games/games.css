@@ -13,6 +13,16 @@
   background:linear-gradient(180deg,rgba(6,8,6,.78),rgba(6,8,6,0));
   backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .g-top-in{display:flex;align-items:center;gap:8px;padding-block:11px}
+.g-acts{display:flex;align-items:center;gap:8px;flex:none;margin-left:auto}
+/* На десктопе три колонки: боковые растут поровну, пока есть место, —
+   поэтому поиск стоит ровно по центру страницы, а не посередине между
+   логотипом и кнопками, которые разной ширины. Когда тесно, боковые
+   берут сколько им нужно, а поле ужимается. */
+@media (min-width:760px){
+  .g-top-in{display:grid;grid-template-columns:minmax(max-content,1fr) minmax(0,420px) minmax(max-content,1fr);gap:16px}
+  .g-brand{justify-self:start}
+  .g-acts{justify-self:end;margin-left:0}
+}
 .g-brand{display:flex;align-items:center;gap:9px;text-decoration:none;flex:none}
 .g-brand .logo{width:clamp(62px,17vw,84px)}
 .g-brand span{font-family:var(--display);font-weight:600;font-size:11px;letter-spacing:.2em;
@@ -25,6 +35,38 @@
   background:none;color:var(--muted);display:grid;place-items:center;cursor:pointer;
   font-family:var(--display);font-weight:600;font-size:15px;line-height:1;transition:.2s}
 .g-round:hover{color:var(--ink);border-color:var(--ink)}
+
+/* ── поиск ──────────────────────────────────────────────── */
+/* На десктопе поле стоит по центру шапки. На телефоне места нет —
+   там вместо поля круглая кнопка, и по нажатию поле раскрывается на
+   всю строку шапки поверх логотипа и кнопок. */
+.g-qslot{display:flex;justify-content:center;min-width:0}
+.g-search{position:relative;display:flex;align-items:center;width:100%;height:40px;
+  border-radius:999px;border:1px solid var(--line-2);background:rgba(6,8,6,.5);
+  transition:border-color .18s,background .18s}
+.g-search:focus-within{border-color:var(--accent);background:rgba(6,8,6,.72)}
+.g-q-ico{flex:none;width:17px;height:17px;margin-left:14px;fill:none;stroke:var(--muted);stroke-width:1.8}
+.g-search input{flex:1;min-width:0;height:100%;border:0;background:none;color:var(--ink);
+  font:inherit;font-size:14px;padding:0 10px;outline:none;-webkit-appearance:none;appearance:none}
+.g-search input::placeholder{color:var(--dim)}
+.g-search input::-webkit-search-cancel-button{display:none}
+.g-q-x{flex:none;width:32px;height:32px;margin-right:4px;border:0;border-radius:50%;background:none;
+  color:var(--muted);display:grid;place-items:center;cursor:pointer}
+.g-q-x:hover{color:var(--ink);background:rgba(255,255,255,.08)}
+.g-q-x svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2}
+.g-q-x[hidden]{display:none}
+.g-q-open svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8}
+.g-q-open{display:none}
+.g-q-open.is-on{border-color:var(--accent);color:var(--accent)}
+@media (max-width:759px){
+  .g-qslot{display:contents}
+  .g-search{display:none}
+  .g-q-open{display:grid}
+  /* Раскрытый поиск лежит поверх всей строки шапки. */
+  .g-top.is-searching .g-search{display:flex;position:absolute;left:16px;right:16px;
+    top:calc(11px + env(safe-area-inset-top,0px));width:auto;z-index:2;background:var(--bg)}
+  .g-top.is-searching .g-top-in > :not(.g-qslot){visibility:hidden}
+}
 
 .g-who{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:5px 6px;
   border-radius:999px;border:1px solid var(--line-2);background:none;color:var(--muted);
@@ -180,6 +222,8 @@
 .g-empty h2{font-family:var(--display);font-weight:600;font-size:19px;margin:0 0 8px;letter-spacing:-.03em}
 .g-empty p{color:var(--muted);font-size:14px;margin:0 auto;max-width:34ch}
 .g-empty .button{margin-top:20px}
+.g-empty .g-link{margin-top:14px;border:0;background:none;color:var(--accent);font:inherit;
+  font-size:14px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 
 /* ── панели ─────────────────────────────────────────────── */
 .g-scrim{position:fixed;inset:0;z-index:60;background:rgba(6,8,6,.74);backdrop-filter:blur(3px);

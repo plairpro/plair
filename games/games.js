@@ -34,6 +34,33 @@
   var games = [];
   var filter = 'All';
 
+  /* Поиск: по названию, жанрам, описанию и нику автора, плюс латинский
+     id игры. Регистр, ё/е и
+     диакритика не важны. Несколько слов ищутся все сразу, каждое — где
+     угодно в карточке: «arcade drone» найдёт аркаду про дрон. */
+  var query = '';
+  try { query = new URLSearchParams(location.search).get('q') || ''; } catch (e) {}
+
+  function fold(v) {
+    return String(v == null ? '' : v).toLowerCase().replace(/ё/g, 'е')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+  function words(q) { return fold(q).split(/[\s,]+/).filter(Boolean); }
+  function haystack(g) {
+    if (g._hay == null) {
+      /* id — латинское имя игры из адреса репозитория. С ним «Офис»
+         находится и по «office», «Сдвиг» — по «shift». */
+      g._hay = fold([g.title, g.id, (g.tags || []).join(' '), g.blurb, g.by, '@' + g.by].join(' '));
+    }
+    return g._hay;
+  }
+  function matches(g) {
+    var w = words(query);
+    if (!w.length) return true;
+    var h = haystack(g);
+    return w.every(function (x) { return h.indexOf(x) !== -1; });
+  }
+
   /* Порядок в ленте. По умолчанию — свежие сверху.
      Популярность: запуск весит единицу, лайк — пять, комментарий —
      пятнадцать. Лестница отражает цену действия: запуск это одно
@@ -226,7 +253,7 @@
     var deck = $('feed');
     deck.classList.remove('is-moved');
     var list = games.filter(function (g) {
-      return filter === 'All' || (g.tags || []).indexOf(filter) !== -1;
+      return (filter === 'All' || (g.tags || []).indexOf(filter) !== -1) && matches(g);
     }).sort(order === 'hot' ? byScore : byDate);
     if (!games.length) {
       deck.innerHTML = '<div class="g-empty"><h2>No games yet</h2>' +
@@ -243,8 +270,14 @@
       return;
     }
     if (!list.length) {
-      deck.innerHTML = '<div class="g-empty"><h2>Nothing here yet</h2>' +
-        '<p>No game is tagged &laquo;' + esc(filter) + '&raquo;.</p></div>';
+      var q = query.trim();
+      deck.innerHTML = q
+        ? '<div class="g-empty"><h2>Nothing found</h2>' +
+          '<p>No game matches &laquo;' + esc(q) + '&raquo;' +
+          (filter !== 'All' ? ' among &laquo;' + esc(filter) + '&raquo;' : '') + '.</p>' +
+          '<button class="g-link" type="button" data-qclear>Clear the search</button></div>'
+        : '<div class="g-empty"><h2>Nothing here yet</h2>' +
+          '<p>No game is tagged &laquo;' + esc(filter) + '&raquo;.</p></div>';
       return;
     }
     deck.innerHTML = list.map(function (g, pos) { return slideHTML(g, games.indexOf(g), pos); }).join('') +
@@ -736,11 +769,12 @@
 
   document.addEventListener('click', function (e) {
     var el = e.target.closest && e.target.closest(
-      '[data-tag],[data-order],[data-play],[data-pick],[data-close],[data-quit],[data-full],[data-more],' +
+      '[data-qclear],[data-tag],[data-order],[data-play],[data-pick],[data-close],[data-quit],[data-full],[data-more],' +
       '#how,#who,#submit-open,#empty-go,#empty-how,#w-go,#w-clear,#f-go,#f-copy,#f-try');
     if (!el) return;
 
     if (el.dataset.tag) { filter = el.dataset.tag; renderFilters(); renderFeed(); return; }
+    if (el.dataset.qclear !== undefined) { setQuery(''); $('q').focus(); return; }
     if (el.dataset.order) {
       order = el.dataset.order;
       try { localStorage.setItem('plair-order', order); } catch (e) {}
@@ -827,6 +861,65 @@
   /* Уходим со страницы — звук игры уходит с нами. На переключение
      вкладки не трогаем: человек вернётся к своей партии. */
   addEventListener('pagehide', function () { if (player) killFrames(player); });
+
+  /* ── поиск ───────────────────────────────────────────── */
+
+  var qTimer = 0;
+  function setQuery(v, typed) {
+    query = v;
+    var box = $('q');
+    if (!typed && box.value !== v) box.value = v;
+    $('q-x').hidden = !v;
+    // На телефоне поле свёрнуто — кнопка горит зелёным, пока поиск действует.
+    $('q-open').classList.toggle('is-on', !!v.trim());
+    /* Запрос живёт в адресе: ссылку с ним можно переслать, и «назад»
+       после игры возвращает к той же выдаче. Историю не засоряем. */
+    try {
+      var u = new URL(location.href);
+      if (v.trim()) u.searchParams.set('q', v.trim()); else u.searchParams.delete('q');
+      history.replaceState(history.state, '', u.pathname + u.search + u.hash);
+    } catch (e) {}
+    if (games.length) renderFeed();
+  }
+
+  function openSearch(on) {
+    var top = document.querySelector('.g-top');
+    top.classList.toggle('is-searching', on);
+    $('q-open').setAttribute('aria-expanded', on ? 'true' : 'false');
+    if (on) setTimeout(function () { $('q').focus(); }, 0);
+  }
+
+  $('q').value = query;
+  $('q-x').hidden = !query;
+  $('q-open').classList.toggle('is-on', !!query.trim());
+  $('q').addEventListener('input', function () {
+    var v = this.value;
+    clearTimeout(qTimer);
+    qTimer = setTimeout(function () { setQuery(v, true); }, 120);
+  });
+  $('q').addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      if (this.value) setQuery(''); else { this.blur(); openSearch(false); }
+    }
+    if (e.key === 'Enter') { e.preventDefault(); this.blur(); }
+  });
+  $('q').addEventListener('blur', function () {
+    // На телефоне поле прячется обратно, если в нём пусто.
+    if (!this.value) openSearch(false);
+  });
+  $('search').addEventListener('submit', function (e) { e.preventDefault(); });
+  $('q-x').addEventListener('click', function () { setQuery(''); $('q').focus(); });
+  $('q-open').addEventListener('click', function () { openSearch(true); });
+
+  /* «/» с клавиатуры прыгает в поиск, как на большинстве сайтов. */
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== '/' || player || open) return;
+    var t = e.target;
+    if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+    e.preventDefault();
+    if (getComputedStyle($('search')).display === 'none') openSearch(true); else $('q').focus();
+  });
 
   /* ── старт ───────────────────────────────────────────── */
 
