@@ -22,7 +22,7 @@
   --danger:#FF8A80;
   --radius:14px;
   --gutter:clamp(18px,4vw,64px);
-  --bar:72px;
+  --bar:56px;
   --display:'Unbounded','Golos Text',Arial,sans-serif;
   --body:'Golos Text','Helvetica Neue',Arial,sans-serif;
   font-family:var(--body);font-size:16px;font-synthesis:none;
@@ -63,7 +63,7 @@ html[data-input="pointer"] .button.solid:focus-visible:not(:hover){
 
 /* ── шапка ─────────────────────────────────────────────────── */
 .home-header{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:clamp(14px,2.4vw,30px);
-  min-height:var(--bar);padding-block:12px;background:color-mix(in srgb,var(--bg) 93%,transparent);
+  min-height:var(--bar);padding-block:6px;background:color-mix(in srgb,var(--bg) 93%,transparent);
   backdrop-filter:blur(14px);border-bottom:1px solid var(--line);
   margin-inline:calc(-1*var(--gutter));padding-inline:var(--gutter)}
 .home-header-left{display:flex;align-items:center;gap:clamp(14px,2.2vw,28px);min-width:0;flex:1}
@@ -75,13 +75,19 @@ html[data-input="pointer"] .button.solid:focus-visible:not(:hover){
 /* Знак студии: логотип и под ним мелкая подпись STUDIO. Логотип — это
    маска, текст внутрь не положить, поэтому оба лежат в одной ссылке.
    Логотип здесь чуть меньше обычного, чтобы шапка почти не выросла. */
-.logo-studio{display:flex;flex-direction:column;align-items:center;gap:2px;flex:none;
+.logo-studio{display:flex;flex-direction:column;align-items:center;gap:0;flex:none;
   text-decoration:none}
-.logo-studio .logo{width:clamp(80px,7.4vw,104px)}
+.logo-studio .logo{width:clamp(64px,5.8vw,80px)}
 .logo-studio:hover .logo{background:var(--accent)}
-.logo-tag{font-family:var(--display);font-size:9px;font-weight:600;line-height:1;
-  letter-spacing:.42em;text-transform:uppercase;color:var(--accent);
-  margin-right:-.42em}
+.logo-tag{font-family:var(--display);font-size:6.5px;font-weight:600;line-height:1;
+  letter-spacing:.4em;text-transform:uppercase;color:var(--accent);
+  margin-top:-1px;margin-right:-.4em}
+/* В шапке всё компактнее: кнопка «Связь» и пункты меню ниже, чем
+   общие кнопки сайта, — иначе полоска меню не становится уже. */
+.home-header .button{min-height:34px;min-width:0;padding:5px 16px 5px 28px;font-size:13px}
+.home-header .button .blob{left:13px;top:calc(50% - 3px);width:6px;height:6px}
+.home-header .site-nav a{min-height:34px}
+html[data-input="pointer"] .home-header .button:focus-visible:not(:hover) .blob{left:13px;top:calc(50% - 3px);width:6px;height:6px}
 .home-header-text{min-width:0;display:none}
 .home-header-text h1,.home-header-text .home-header-title{margin:0;font-family:var(--body);font-size:14px;
   font-weight:500;line-height:1.3;letter-spacing:0}
