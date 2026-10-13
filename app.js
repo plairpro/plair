@@ -79,6 +79,12 @@
     // Исключение — узкий экран. Пара широких кадров рядом даёт там по
     // 170 px на кадр, и внутри уже ничего не разглядеть, поэтому на
     // телефоне широкие идут по одному, а вертикальные по-прежнему парами.
+    // Три экрана телефона — один ряд: это одна игра в трёх состояниях,
+    // и рядом они читаются как раскадровка, а «два и один» ломает строй.
+    const isPhone = (item) => ratio(item) < 0.7;
+    if (media.length === 3 && media.every(isPhone)) {
+      return [{ items: media, cap: narrow ? 360 : 470 }];
+    }
     const perRow = narrow && !media.every(isTall) ? 1 : 2;
     const rows = [];
     for (let i = 0; i < media.length; i += perRow) rows.push(media.slice(i, i + perRow));
