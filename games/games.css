@@ -311,4 +311,58 @@
 .g-fallback p{color:var(--muted);font-size:13.5px;margin:0}
 .g-fallback .button{margin-top:20px}
 
+/* ── поделиться ─────────────────────────────────────────── */
+/* В ленте: кнопка в правом нижнем углу кадра, сети выезжают столбиком
+   вверх. В проигрывателе: кнопка в плашке, сети — строкой влево. */
+.g-share{position:absolute;z-index:4;right:12px;bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+.g-share-btn:not(.g-x){width:40px;height:40px;border-radius:50%;cursor:pointer;display:grid;place-items:center;
+  border:1px solid rgba(255,255,255,.34);background:rgba(6,8,6,.42);background-clip:padding-box;
+  color:#fff;transition:border-color .18s ease,color .18s ease,background .18s ease}
+.g-share-btn:not(.g-x):hover,.g-share.is-open .g-share-btn:not(.g-x){border-color:var(--accent);color:var(--accent)}
+.g-share.is-bar.is-open .g-share-btn{border-color:var(--accent);color:var(--accent)}
+.g-share-btn svg{width:18px;height:18px}
+.g-share-btn.g-x svg{width:16px;height:16px}
+.g-line{fill:none!important;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.g-share-list{position:absolute;display:flex;gap:8px;visibility:hidden;pointer-events:none}
+.g-share.is-rail .g-share-list{bottom:calc(100% + 8px);right:2px;flex-direction:column-reverse}
+.g-sh{--c:var(--accent);width:36px;height:36px;border-radius:50%;flex:none;display:grid;place-items:center;
+  border:1px solid rgba(255,255,255,.22);background:rgba(6,8,6,.62);color:#fff;cursor:pointer;
+  text-decoration:none;opacity:0;transform:translateY(10px) scale(.85);
+  transition:opacity .16s ease,transform .2s ease,background .15s ease,border-color .15s ease;
+  transition-delay:0s}
+.g-sh svg{width:16px;height:16px;fill:currentColor}
+.g-sh .g-line{width:17px;height:17px}
+.g-share.is-open .g-share-list{visibility:visible;pointer-events:auto}
+.g-share.is-open .g-sh{opacity:1;transform:none;transition-delay:calc(var(--n) * 22ms)}
+.g-sh:hover,.g-sh:focus-visible{background:var(--c);border-color:var(--c);outline:none}
+.g-sh:focus-visible{box-shadow:0 0 0 2px #fff}
+.g-sh.is-x{--c:#000}.g-sh.is-threads{--c:#000}.g-sh.is-instagram{--c:#E4405F}
+.g-sh.is-facebook{--c:#0866FF}.g-sh.is-telegram{--c:#26A5E4}.g-sh.is-whatsapp{--c:#25D366}
+.g-sh.is-vk{--c:#0077FF}
+.g-sh.is-copy:hover,.g-sh.is-copy:focus-visible,.g-sh.is-done{background:var(--accent);border-color:var(--accent);color:#06140a}
+/* Подпись в ленте не заезжает под кнопку. */
+.g-slide .g-info{padding-right:64px}
+
+/* Плашка проигрывателя: строка ложится поверх названия, кнопка остаётся
+   на месте и закрывает строку обратно. */
+.g-bar{position:relative}
+.g-share.is-bar{position:static}
+.g-share.is-bar .g-share-list{top:0;bottom:0;left:12px;right:56px;
+  padding-top:env(safe-area-inset-top,0px);align-items:center;justify-content:flex-end;gap:4px;
+  background:var(--bg);overflow-x:auto;scrollbar-width:none}
+.g-share.is-bar .g-share-list::-webkit-scrollbar{display:none}
+.g-share.is-bar .g-sh{width:32px;height:32px;border-color:var(--line);background:none;color:var(--muted);
+  transform:translateX(12px) scale(.85)}
+.g-share.is-bar.is-open .g-sh{transform:none;transition-delay:calc((8 - var(--n)) * 18ms)}
+.g-share.is-bar .g-sh:hover,.g-share.is-bar .g-sh:focus-visible{color:#fff}
+.g-share.is-bar .g-sh.is-copy:hover,.g-share.is-bar .g-sh.is-done{color:#06140a}
+.g-share.is-bar .g-sh svg{width:15px;height:15px}
+
+.g-toast{position:fixed;z-index:95;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0px));
+  transform:translate(-50%,12px);opacity:0;pointer-events:none;max-width:calc(100% - 32px);
+  padding:9px 16px;border-radius:999px;background:var(--bg-2);border:1px solid var(--line-2);
+  color:var(--ink);font-size:13px;text-align:center;transition:opacity .2s ease,transform .2s ease;
+  overflow-wrap:anywhere}
+.g-toast.is-on{opacity:1;transform:translate(-50%,0)}
+
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
