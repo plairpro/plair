@@ -72,6 +72,16 @@ html[data-input="pointer"] .button.solid:focus-visible:not(:hover){
   -webkit-mask:url('assets/logo-mask.webp') center/100% 100% no-repeat;
   mask:url('assets/logo-mask.webp') center/100% 100% no-repeat}
 .logo:hover{background:var(--accent)}
+/* Знак студии: логотип и под ним мелкая подпись STUDIO. Логотип — это
+   маска, текст внутрь не положить, поэтому оба лежат в одной ссылке.
+   Логотип здесь чуть меньше обычного, чтобы шапка почти не выросла. */
+.logo-studio{display:flex;flex-direction:column;align-items:center;gap:2px;flex:none;
+  text-decoration:none}
+.logo-studio .logo{width:clamp(80px,7.4vw,104px)}
+.logo-studio:hover .logo{background:var(--accent)}
+.logo-tag{font-family:var(--display);font-size:9px;font-weight:600;line-height:1;
+  letter-spacing:.42em;text-transform:uppercase;color:var(--accent);
+  margin-right:-.42em}
 .home-header-text{min-width:0;display:none}
 .home-header-text h1,.home-header-text .home-header-title{margin:0;font-family:var(--body);font-size:14px;
   font-weight:500;line-height:1.3;letter-spacing:0}
