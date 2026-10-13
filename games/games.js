@@ -368,6 +368,10 @@
           'Your card shows up about a minute later.</li>' +
       '</ol>' +
 
+      '<h4>Who runs this</h4>' +
+      '<p>PLAIR Games is made by PLAIR, a studio that builds games for brands, events and ' +
+        'training. <a href="/studio/">See the studio</a>.</p>' +
+
       '<h4>How the feed is ordered</h4>' +
       '<p><b>New</b> is the default: whatever was added last comes first. ' +
       '<b>Popular</b> scores each game as <code>plays + 5 &times; likes + 15 &times; comments</code> ' +

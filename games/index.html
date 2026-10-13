@@ -1,48 +1,10 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0C0E0C">
-<title>PLAIR Games — small web games by their makers</title>
-<meta name="description" content="Publish a web game from your own GitHub repository and play anything here without an account.">
-<!-- Пока страница в работе: из поиска закрыта. Снять, когда пойдём в бой. -->
-<meta name="robots" content="noindex,nofollow">
-<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;800&display=swap">
-<link rel="stylesheet" href="/styles.css?v=39">
-<link rel="stylesheet" href="/games/games.css?v=21">
-</head>
-<body>
-<a class="skip-link" href="#feed">Skip to the games</a>
-
-<header class="g-top">
-  <div class="g-shell g-top-in">
-    <a class="g-brand" href="/games/" aria-label="PLAIR Games"><span class="logo"></span></a>
-    <div class="g-qslot">
-      <form class="g-search" id="search" role="search" action="#" autocomplete="off">
-        <svg class="g-q-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5" stroke-linecap="round"/></svg>
-        <input id="q" type="search" spellcheck="false"
-          autocapitalize="none" enterkeyhint="search" aria-label="Search games">
-        <button class="g-q-x" id="q-x" type="button" aria-label="Clear the search" hidden>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" stroke-linecap="round"/></svg></button>
-      </form>
-    </div>
-    <div class="g-acts">
-      <button class="g-round g-q-open" id="q-open" type="button" aria-label="Search" aria-controls="search" aria-expanded="false">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5" stroke-linecap="round"/></svg></button>
-      <button class="g-round" id="how" type="button" aria-label="How to add a game">i</button>
-      <button class="g-who" id="who" type="button" aria-label="Your GitHub name"></button>
-      <button class="g-round g-add" id="submit-open" type="button" aria-label="Submit a game" title="Submit a game">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg></button>
-    </div>
-  </div>
-</header>
-
-<nav class="g-filters" id="filters" aria-label="Filter by genre"></nav>
-
-<main class="g-deck" id="feed" tabindex="-1" aria-label="Games">
-  <p class="g-hint" style="margin:40vh auto;text-align:center">Loading the catalogue&hellip;</p>
-</main>
-
-<script src="/games/games.js?v=21" defer></script>
-</body></html>
+<title>PLAIR Games</title>
+<meta name="robots" content="noindex">
+<link rel="canonical" href="https://plair.pro/">
+<!-- Лента переехала на корень. Запрос (?q=) и открытая игра (#play-…)
+     переносятся вместе со ссылкой, чтобы разосланные адреса не ломались. -->
+<script>location.replace('/' + location.search + location.hash);</script>
+<meta http-equiv="refresh" content="0; url=/">
+</head><body><p><a href="/">PLAIR Games moved to plair.pro</a></p></body></html>

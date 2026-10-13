@@ -11,7 +11,7 @@
    Размеры и узкие копии делает скрипт fix-assets.py в корне репозитория:
    положите оригинал в assets/, впишите путь сюда и запустите его.
 
-   Видео: { type: "video", src: "/assets/name.mp4", poster: "assets/poster.webp", alt: "Описание" }
+   Видео: { type: "video", src: "/assets/name.mp4", poster: "/assets/poster.webp", alt: "Описание" }
    Сначала положите файл, потом добавляйте запись. */
 /* Куда уходят заявки из формы.
 
