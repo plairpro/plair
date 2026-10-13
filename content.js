@@ -108,6 +108,17 @@ window.PLAIR_CASES = [
     ]
   },
   {
+    id: "ochag",
+    title: "Очаг",
+    category: "Web / Mobile",
+    description: "Игра для ресторана уральской кухни.",
+    media: [
+      { type: "image", src: "/assets/ochag-1.webp", w: 908, h: 1712, alt: "Стартовый экран игры «Очаг»: сковорода на очаге, свечи и кнопка «Разжечь очаг»" },
+      { type: "image", src: "/assets/ochag-2.webp", w: 908, h: 1712, alt: "Рецепт «Ремесленный хлеб» и падающие продукты, которые нужно ловить, в игре «Очаг»" },
+      { type: "image", src: "/assets/ochag-3.webp", w: 908, h: 1712, alt: "Итог смены: 410 очков и пороги комплиментов от ресторана в игре «Очаг»" }
+    ]
+  },
+  {
     id: "travel-quest",
     title: "Travel Quest",
     category: "Mobile",
