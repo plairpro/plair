@@ -9,7 +9,7 @@
       "Casual",
       "Experimental"
     ],
-    "cover": "/games/covers/memsbox.webp",
+    "cover": "/games/covers/memsbox.webp?v=2",
     "url": "https://plairpro.github.io/memsbox/",
     "repo": "https://github.com/plairpro/memsbox",
     "by": "plairpro",
@@ -57,8 +57,8 @@
       "Arcade",
       "Casual"
     ],
-    "cover": "/games/covers/rover.webp",
-    "url": "https://plairpro.github.io/rover/dist/",
+    "cover": "/games/covers/rover.webp?v=2",
+    "url": "https://plairpro.github.io/rover/",
     "repo": "https://github.com/plairpro/rover",
     "by": "plairpro",
     "added": "2026-10-05"
