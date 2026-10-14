@@ -199,7 +199,10 @@
 @keyframes g-bob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(7px)}}
 
 @media (min-width:760px){
-  .g-slide{--pane-w:min(430px,calc((100dvh - 138px) * 0.5625))}
+  /* На широком мониторе кадр квадратный: вертикальный, как у телефона,
+     оставлял две трети экрана пустыми. Обложка 9:16 вписывается в квадрат
+     целиком, по бокам — её же размытая копия. */
+  .g-slide{--pane-w:min(calc(100dvh - 138px),calc(100vw - 64px))}
   .g-pane{height:calc(100% - 138px);align-self:flex-start;margin-top:100px;
     border-radius:20px;box-shadow:0 30px 90px rgba(0,0,0,.6)}
   /* Кадр на десктопе сдвинут вниз и укорочен, поэтому центр кнопки
