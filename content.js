@@ -115,7 +115,8 @@ window.PLAIR_CASES = [
     media: [
       { type: "image", src: "/assets/vk-fest-1.webp", w: 1280, h: 853, alt: "Гость с геймпадом у геймбуса Университета Иннополис: игра на экране в багажнике фургона на VK Fest" },
       { type: "image", src: "/assets/vk-fest-2.webp", w: 1280, h: 853, alt: "Очередь гостей VK Fest у фургона-геймбуса Университета Иннополис" },
-      { type: "image", src: "/assets/vk-fest-3.webp", w: 1280, h: 853, alt: "Чиллаут-зона с креслами-мешками у геймбуса Университета Иннополис на VK Fest в Казани" }
+      { type: "image", src: "/assets/vk-fest-3.webp", w: 1280, h: 853, alt: "Чиллаут-зона с креслами-мешками у геймбуса Университета Иннополис на VK Fest в Казани" },
+      { type: "image", src: "/assets/vk-fest-4.webp", w: 1280, h: 853, alt: "Очередь гостей VK Fest к геймбусу Университета Иннополис" }
     ]
   },
   {
