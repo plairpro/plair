@@ -356,7 +356,8 @@
         '<li>It lives in a <b>public repository you own</b> on GitHub, with Pages turned on ' +
           '(Settings &rarr; Pages &rarr; pick a branch).</li>' +
         '<li>There is a <b>cover image</b> in that repository: upright, at least 720px across, ' +
-          '9:16 fits the screen exactly. Shoot it <b>inside</b> the game, not on the title ' +
+          '9:16 fits a phone exactly. On a computer the middle square of it is shown, so keep ' +
+          'the action in the centre. Shoot it <b>inside</b> the game, not on the title ' +
           'screen &mdash; a start button under our Play button reads as a mess.</li>' +
       '</ul>' +
 
@@ -494,7 +495,8 @@
       '<label class="g-field"><span>Cover image URL</span>' +
         '<input id="f-cover" type="url" autocapitalize="none" spellcheck="false" ' +
         'placeholder="https://…/cover.webp"></label>' +
-      '<p class="g-hint" id="f-cover-msg">Wider than it is tall, at least 800px across. Keep it in your ' +
+      '<p class="g-hint" id="f-cover-msg">Upright, 9:16, at least 720px across; on a computer the middle ' +
+        'square is shown. Keep it in your ' +
         'own repository so nothing of yours lives on our side.</p>' +
       '<div class="g-field"><span>Genres &mdash; up to 5</span><div class="g-pick" id="f-tags">' +
         TAGS.map(function (t) {
