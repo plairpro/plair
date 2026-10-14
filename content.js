@@ -70,18 +70,6 @@ window.PLAIR_CASES = [
     ]
   },
   {
-    id: "memsbox",
-    title: "Мемсбокс",
-    category: "Веб / карточная",
-    description: "Карточный коллекционный лутбокс-рогалик про мемы в стиле Таро.",
-    media: [
-      { type: "image", src: "/assets/memsbox-1.webp", w: 2000, h: 1143, alt: "Выпавшая карта «Капибара» в оформлении таро на синем фоне с лучами в игре «Мемсбокс»" },
-      { type: "image", src: "/assets/memsbox-2.webp", w: 2000, h: 1143, alt: "Три карты в руке с бафами и дебафами в игре «Мемсбокс»" },
-      { type: "image", src: "/assets/memsbox-3.webp", w: 2000, h: 1143, alt: "Коллекция из рубашек карт и нескольких открытых мемов в игре «Мемсбокс»" },
-      { type: "image", src: "/assets/memsbox-4.webp", w: 2000, h: 1143, alt: "Разбор броска судьбы: шансы на новую карту, повтор и фантик в игре «Мемсбокс»" }
-    ]
-  },
-  {
     id: "gaica",
     title: "GAICA",
     category: "Хакатон / платформа",
@@ -92,17 +80,6 @@ window.PLAIR_CASES = [
       { type: "image", src: "/assets/gaica-2.webp", w: 1600, h: 1067, alt: "Участники GAICA на пуфах смотрят трансляцию матчей ИИ-агентов" },
       { type: "image", src: "/assets/gaica-3.webp", w: 1600, h: 1067, alt: "Призы GAICA в виде гаек на стенде турнира" },
       { type: "image", src: "/assets/gaica-4.webp", w: 1600, h: 1067, alt: "Общее фото участников и жюри финала GAICA на сцене стенда на РВФ" }
-    ]
-  },
-  {
-    id: "vk-fest",
-    title: "VK Fest",
-    category: "Стенд",
-    description: "Интерактивный геймбус для Университета Иннополис.",
-    media: [
-      { type: "image", src: "/assets/vk-fest-1.webp", w: 1280, h: 853, alt: "Гость с геймпадом у геймбуса Университета Иннополис: игра на экране в багажнике фургона на VK Fest" },
-      { type: "image", src: "/assets/vk-fest-2.webp", w: 1280, h: 853, alt: "Очередь гостей VK Fest у фургона-геймбуса Университета Иннополис" },
-      { type: "image", src: "/assets/vk-fest-3.webp", w: 1280, h: 853, alt: "Чиллаут-зона с креслами-мешками у геймбуса Университета Иннополис на VK Fest в Казани" }
     ]
   },
   {
@@ -119,17 +96,6 @@ window.PLAIR_CASES = [
     ]
   },
   {
-    id: "ochag",
-    title: "Очаг",
-    category: "Web / Mobile",
-    description: "Игра для ресторана уральской кухни.",
-    media: [
-      { type: "image", src: "/assets/ochag-phone-1.webp", w: 856, h: 1712, alt: "Стартовый экран игры «Очаг»: сковорода на очаге, свечи и кнопка «Разжечь очаг»" },
-      { type: "image", src: "/assets/ochag-phone-2.webp", w: 856, h: 1712, alt: "Рецепт «Ремесленный хлеб» и падающие продукты, которые нужно ловить, в игре «Очаг»" },
-      { type: "image", src: "/assets/ochag-phone-3.webp", w: 856, h: 1712, alt: "Итог смены: 410 очков и пороги комплиментов от ресторана в игре «Очаг»" }
-    ]
-  },
-  {
     id: "travel-quest",
     title: "Travel Quest",
     category: "Mobile",
@@ -141,35 +107,49 @@ window.PLAIR_CASES = [
     ]
   },
   {
-    id: "tehnopark",
-    title: "Геймификация технопарка",
-    category: "Web",
-    description: "Разработка системы геймификации технопарков Иннополиса.",
+    id: "vk-fest",
+    title: "VK Fest",
+    category: "Стенд",
+    description: "Интерактивный геймбус для Университета Иннополис.",
     media: [
-      { type: "image", src: "/assets/tehnopark-1.webp", w: 1280, h: 853, alt: "Технопарк Иннополиса с высоты птичьего полёта с подсвеченными секторами направлений" },
-      { type: "image", src: "/assets/tehnopark-2.webp", w: 1280, h: 853, alt: "Схема уровней участника с наградами и значками в системе геймификации технопарка" }
+      { type: "image", src: "/assets/vk-fest-1.webp", w: 1280, h: 853, alt: "Гость с геймпадом у геймбуса Университета Иннополис: игра на экране в багажнике фургона на VK Fest" },
+      { type: "image", src: "/assets/vk-fest-2.webp", w: 1280, h: 853, alt: "Очередь гостей VK Fest у фургона-геймбуса Университета Иннополис" },
+      { type: "image", src: "/assets/vk-fest-3.webp", w: 1280, h: 853, alt: "Чиллаут-зона с креслами-мешками у геймбуса Университета Иннополис на VK Fest в Казани" }
     ]
   },
   {
-    id: "hotlime",
-    title: "Hotlime",
-    category: "PC",
-    description: "Аркадный PvP-экшен для 2–4 игроков.",
+    id: "memsbox",
+    title: "Мемсбокс",
+    category: "Веб / карточная",
+    description: "Карточный коллекционный лутбокс-рогалик про мемы в стиле Таро.",
     media: [
-      { type: "image", src: "/assets/hotlime-1.webp", w: 1280, h: 720, alt: "Взрыв в офисе и двое игроков на карте в игре Hotlime" },
-      { type: "image", src: "/assets/hotlime-2.webp", w: 1280, h: 720, alt: "Перестрелка во дворе с разбросанным оружием в игре Hotlime" },
-      { type: "image", src: "/assets/hotlime-3.webp", w: 1280, h: 720, alt: "Схватка в офисных помещениях в игре Hotlime" }
+      { type: "image", src: "/assets/memsbox-1.webp", w: 2000, h: 1143, alt: "Выпавшая карта «Капибара» в оформлении таро на синем фоне с лучами в игре «Мемсбокс»" },
+      { type: "image", src: "/assets/memsbox-2.webp", w: 2000, h: 1143, alt: "Три карты в руке с бафами и дебафами в игре «Мемсбокс»" },
+      { type: "image", src: "/assets/memsbox-3.webp", w: 2000, h: 1143, alt: "Коллекция из рубашек карт и нескольких открытых мемов в игре «Мемсбокс»" },
+      { type: "image", src: "/assets/memsbox-4.webp", w: 2000, h: 1143, alt: "Разбор броска судьбы: шансы на новую карту, повтор и фантик в игре «Мемсбокс»" }
     ]
   },
   {
-    id: "sportivnye-vyzhivateli",
-    title: "Самые спортивные выживатели",
-    category: "PC",
-    description: "Игра про популяризацию ЗОЖ с брендом художницы Beco.",
+    id: "naydi-oshibku",
+    title: "Найди ошибку",
+    category: "Web / стенд",
+    description: "Игра на поиск ошибок в интерфейсе для Почтатеха.",
     media: [
-      { type: "image", src: "/assets/sportivnye-vyzhivateli-1.webp", w: 937, h: 512, alt: "Встреча с сектантом и диалоговое окно в игре «Самые спортивные выживатели»" },
-      { type: "image", src: "/assets/sportivnye-vyzhivateli-2.webp", w: 1280, h: 720, alt: "Бой с толпой противников у дома лесника в игре «Самые спортивные выживатели»" },
-      { type: "image", src: "/assets/sportivnye-vyzhivateli-3.webp", w: 1280, h: 720, alt: "Экран выбора артефакта с тремя вариантами в игре «Самые спортивные выживатели»" }
+      { type: "image", src: "/assets/naydi-oshibku-1.webp", w: 2000, h: 1124, alt: "Интерфейс отслеживания отправления со спрятанными ошибками в игре «Найди ошибку»" },
+      { type: "image", src: "/assets/naydi-oshibku-2.webp", w: 2000, h: 1123, alt: "Экран регистрации участника с маскотом Почтатеха в игре «Найди ошибку»" },
+      { type: "image", src: "/assets/naydi-oshibku-3.webp", w: 2000, h: 1125, alt: "Экран правил игры «Найди ошибку» для Почтатеха" },
+      { type: "image", src: "/assets/naydi-oshibku-4.webp", w: 960, h: 1280, alt: "Стенд Почтатеха с игрой «Найди ошибку» на планшете и мерчем для победителей" }
+    ]
+  },
+  {
+    id: "ochag",
+    title: "Очаг",
+    category: "Web / Mobile",
+    description: "Игра для ресторана уральской кухни.",
+    media: [
+      { type: "image", src: "/assets/ochag-phone-1.webp", w: 856, h: 1712, alt: "Стартовый экран игры «Очаг»: сковорода на очаге, свечи и кнопка «Разжечь очаг»" },
+      { type: "image", src: "/assets/ochag-phone-2.webp", w: 856, h: 1712, alt: "Рецепт «Ремесленный хлеб» и падающие продукты, которые нужно ловить, в игре «Очаг»" },
+      { type: "image", src: "/assets/ochag-phone-3.webp", w: 856, h: 1712, alt: "Итог смены: 410 очков и пороги комплиментов от ресторана в игре «Очаг»" }
     ]
   },
   {
@@ -192,6 +172,28 @@ window.PLAIR_CASES = [
       { type: "image", src: "/assets/marshrut-perestroen-1.webp", w: 2000, h: 1134, alt: "Заставка «Маршрут перестроен» с автомобилем на заснеженной дороге" },
       { type: "image", src: "/assets/marshrut-perestroen-2.webp", w: 2000, h: 1138, alt: "Экран окончания поездки с пройденным расстоянием в игре «Маршрут перестроен»" },
       { type: "image", src: "/assets/marshrut-perestroen-3.webp", w: 2000, h: 1138, alt: "Олень на дороге перед автомобилем в игре «Маршрут перестроен»" }
+    ]
+  },
+  {
+    id: "hotlime",
+    title: "Hotlime",
+    category: "PC",
+    description: "Аркадный PvP-экшен для 2–4 игроков.",
+    media: [
+      { type: "image", src: "/assets/hotlime-1.webp", w: 1280, h: 720, alt: "Взрыв в офисе и двое игроков на карте в игре Hotlime" },
+      { type: "image", src: "/assets/hotlime-2.webp", w: 1280, h: 720, alt: "Перестрелка во дворе с разбросанным оружием в игре Hotlime" },
+      { type: "image", src: "/assets/hotlime-3.webp", w: 1280, h: 720, alt: "Схватка в офисных помещениях в игре Hotlime" }
+    ]
+  },
+  {
+    id: "sportivnye-vyzhivateli",
+    title: "Самые спортивные выживатели",
+    category: "PC",
+    description: "Игра про популяризацию ЗОЖ с брендом художницы Beco.",
+    media: [
+      { type: "image", src: "/assets/sportivnye-vyzhivateli-1.webp", w: 937, h: 512, alt: "Встреча с сектантом и диалоговое окно в игре «Самые спортивные выживатели»" },
+      { type: "image", src: "/assets/sportivnye-vyzhivateli-2.webp", w: 1280, h: 720, alt: "Бой с толпой противников у дома лесника в игре «Самые спортивные выживатели»" },
+      { type: "image", src: "/assets/sportivnye-vyzhivateli-3.webp", w: 1280, h: 720, alt: "Экран выбора артефакта с тремя вариантами в игре «Самые спортивные выживатели»" }
     ]
   },
   {
@@ -218,18 +220,6 @@ window.PLAIR_CASES = [
     ]
   },
   {
-    id: "naydi-oshibku",
-    title: "Найди ошибку",
-    category: "Web / стенд",
-    description: "Игра на поиск ошибок в интерфейсе для Почтатеха.",
-    media: [
-      { type: "image", src: "/assets/naydi-oshibku-1.webp", w: 2000, h: 1124, alt: "Интерфейс отслеживания отправления со спрятанными ошибками в игре «Найди ошибку»" },
-      { type: "image", src: "/assets/naydi-oshibku-2.webp", w: 2000, h: 1123, alt: "Экран регистрации участника с маскотом Почтатеха в игре «Найди ошибку»" },
-      { type: "image", src: "/assets/naydi-oshibku-3.webp", w: 2000, h: 1125, alt: "Экран правил игры «Найди ошибку» для Почтатеха" },
-      { type: "image", src: "/assets/naydi-oshibku-4.webp", w: 960, h: 1280, alt: "Стенд Почтатеха с игрой «Найди ошибку» на планшете и мерчем для победителей" }
-    ]
-  },
-  {
     id: "polka-chudes",
     title: "Полка чудес",
     category: "Web / Mobile",
@@ -238,6 +228,16 @@ window.PLAIR_CASES = [
       { type: "image", src: "/assets/polka-chudes-1.webp", w: 1094, h: 1708, alt: "Прыгающий персонаж-медвежонок на игровой локации в «Полке чудес»" },
       { type: "image", src: "/assets/polka-chudes-2.webp", w: 1094, h: 1708, alt: "Экран награды с воздушными шарами и подарком в «Полке чудес»" },
       { type: "image", src: "/assets/polka-chudes-3.webp", w: 1094, h: 1708, alt: "Финальный экран со счётом игрока в «Полке чудес»" }
+    ]
+  },
+  {
+    id: "tehnopark",
+    title: "Геймификация технопарка",
+    category: "Web",
+    description: "Разработка системы геймификации технопарков Иннополиса.",
+    media: [
+      { type: "image", src: "/assets/tehnopark-1.webp", w: 1280, h: 853, alt: "Технопарк Иннополиса с высоты птичьего полёта с подсвеченными секторами направлений" },
+      { type: "image", src: "/assets/tehnopark-2.webp", w: 1280, h: 853, alt: "Схема уровней участника с наградами и значками в системе геймификации технопарка" }
     ]
   },
   {
