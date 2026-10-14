@@ -83,6 +83,18 @@ window.PLAIR_CASES = [
     ]
   },
   {
+    id: "innosim",
+    title: "Инносим",
+    category: "Web / стенд",
+    description: "Симулятор городского движения для стенда выставки Smart City.",
+    media: [
+      { type: "image", src: "/assets/innosim-1.webp", w: 2000, h: 1033, alt: "3D-модель круглого здания с автономным такси и пешеходами в симуляторе «Инносим»" },
+      { type: "image", src: "/assets/innosim-2.webp", w: 2000, h: 1036, alt: "Роботы-доставщики и беспилотный транспорт на городской улице в симуляторе «Инносим»" },
+      { type: "image", src: "/assets/innosim-3.webp", w: 2000, h: 1044, alt: "Панорама квартала с беспилотным транспортом в симуляторе «Инносим»" },
+      { type: "image", src: "/assets/innosim-4.webp", w: 1735, h: 906, alt: "Посетители выставки управляют симулятором «Инносим» на сенсорном экране стенда" }
+    ]
+  },
+  {
     id: "game-open-lab",
     title: "Game Open Lab",
     category: "Ивент",
@@ -93,18 +105,6 @@ window.PLAIR_CASES = [
       { type: "image", src: "/assets/game-open-lab-2.webp", w: 1280, h: 853, alt: "Паблик-ток «Будущее игровой индустрии» в полном зале на Game Open Lab" },
       { type: "image", src: "/assets/game-open-lab-3.webp", w: 1280, h: 853, alt: "Рабочая зона геймджема с командами за компьютерами на Game Open Lab" },
       { type: "image", src: "/assets/game-open-lab-4.webp", w: 1280, h: 853, alt: "Двое экспертов с микрофонами отвечают залу на Game Open Lab" }
-    ]
-  },
-  {
-    id: "innosim",
-    title: "Инносим",
-    category: "Web",
-    description: "Симулятор городского движения.",
-    media: [
-      { type: "image", src: "/assets/innosim-1.webp", w: 2000, h: 1033, alt: "3D-модель круглого здания с автономным такси и пешеходами в симуляторе «Инносим»" },
-      { type: "image", src: "/assets/innosim-2.webp", w: 2000, h: 1036, alt: "Роботы-доставщики и беспилотный транспорт на городской улице в симуляторе «Инносим»" },
-      { type: "image", src: "/assets/innosim-3.webp", w: 2000, h: 1044, alt: "Панорама квартала с беспилотным транспортом в симуляторе «Инносим»" },
-      { type: "image", src: "/assets/innosim-4.webp", w: 1735, h: 906, alt: "Посетители выставки управляют симулятором «Инносим» на сенсорном экране стенда" }
     ]
   },
   {
