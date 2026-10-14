@@ -96,14 +96,15 @@ window.PLAIR_CASES = [
     ]
   },
   {
-    id: "travel-quest",
-    title: "Travel Quest",
-    category: "Mobile",
-    description: "AR-паззл с квестами для изучения городов.",
+    id: "innosim",
+    title: "Инносим",
+    category: "Web",
+    description: "Симулятор городского движения.",
     media: [
-      { type: "image", src: "/assets/travel-quest-1.webp", w: 701, h: 623, alt: "Карта с точкой квеста и список заданий в приложении Travel Quest" },
-      { type: "image", src: "/assets/travel-quest-2.webp", w: 657, h: 582, alt: "Сканирование QR-кода в городе и японский кроссворд в приложении Travel Quest" },
-      { type: "image", src: "/assets/travel-quest-3.webp", w: 663, h: 592, alt: "Экраны завершения квеста с промокодом и новым персонажем в приложении Travel Quest" }
+      { type: "image", src: "/assets/innosim-1.webp", w: 2000, h: 1033, alt: "3D-модель круглого здания с автономным такси и пешеходами в симуляторе «Инносим»" },
+      { type: "image", src: "/assets/innosim-2.webp", w: 2000, h: 1036, alt: "Роботы-доставщики и беспилотный транспорт на городской улице в симуляторе «Инносим»" },
+      { type: "image", src: "/assets/innosim-3.webp", w: 2000, h: 1044, alt: "Панорама квартала с беспилотным транспортом в симуляторе «Инносим»" },
+      { type: "image", src: "/assets/innosim-4.webp", w: 1735, h: 906, alt: "Посетители выставки управляют симулятором «Инносим» на сенсорном экране стенда" }
     ]
   },
   {
@@ -150,18 +151,6 @@ window.PLAIR_CASES = [
       { type: "image", src: "/assets/ochag-phone-1.webp", w: 856, h: 1712, alt: "Стартовый экран игры «Очаг»: сковорода на очаге, свечи и кнопка «Разжечь очаг»" },
       { type: "image", src: "/assets/ochag-phone-2.webp", w: 856, h: 1712, alt: "Рецепт «Ремесленный хлеб» и падающие продукты, которые нужно ловить, в игре «Очаг»" },
       { type: "image", src: "/assets/ochag-phone-3.webp", w: 856, h: 1712, alt: "Итог смены: 410 очков и пороги комплиментов от ресторана в игре «Очаг»" }
-    ]
-  },
-  {
-    id: "innosim",
-    title: "Инносим",
-    category: "Web",
-    description: "Симулятор городского движения.",
-    media: [
-      { type: "image", src: "/assets/innosim-1.webp", w: 2000, h: 1033, alt: "3D-модель круглого здания с автономным такси и пешеходами в симуляторе «Инносим»" },
-      { type: "image", src: "/assets/innosim-2.webp", w: 2000, h: 1036, alt: "Роботы-доставщики и беспилотный транспорт на городской улице в симуляторе «Инносим»" },
-      { type: "image", src: "/assets/innosim-3.webp", w: 2000, h: 1044, alt: "Панорама квартала с беспилотным транспортом в симуляторе «Инносим»" },
-      { type: "image", src: "/assets/innosim-4.webp", w: 1735, h: 906, alt: "Посетители выставки управляют симулятором «Инносим» на сенсорном экране стенда" }
     ]
   },
   {
@@ -250,6 +239,17 @@ window.PLAIR_CASES = [
       { type: "image", src: "/assets/t-quest-1.webp", w: 751, h: 1013, alt: "Персонаж и золотистое существо на игровой локации в T-Quest"},
       { type: "image", src: "/assets/t-quest-2.webp", w: 747, h: 1015, alt: "Экран выбора стихии с командой персонажей в T-Quest" },
       { type: "image", src: "/assets/t-quest-3.webp", w: 757, h: 1006, alt: "Персонаж-бык Хнум в T-Quest" }
+    ]
+  },
+  {
+    id: "travel-quest",
+    title: "Travel Quest",
+    category: "Mobile",
+    description: "AR-паззл с квестами для изучения городов.",
+    media: [
+      { type: "image", src: "/assets/travel-quest-1.webp", w: 701, h: 623, alt: "Карта с точкой квеста и список заданий в приложении Travel Quest" },
+      { type: "image", src: "/assets/travel-quest-2.webp", w: 657, h: 582, alt: "Сканирование QR-кода в городе и японский кроссворд в приложении Travel Quest" },
+      { type: "image", src: "/assets/travel-quest-3.webp", w: 663, h: 592, alt: "Экраны завершения квеста с промокодом и новым персонажем в приложении Travel Quest" }
     ]
   }
 ];
