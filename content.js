@@ -95,6 +95,17 @@ window.PLAIR_CASES = [
     ]
   },
   {
+    id: "vk-fest",
+    title: "VK Fest",
+    category: "Стенд",
+    description: "Интерактивный геймбус для Университета Иннополис.",
+    media: [
+      { type: "image", src: "/assets/vk-fest-1.webp", w: 1280, h: 853, alt: "Гость с геймпадом у геймбуса Университета Иннополис: игра на экране в багажнике фургона на VK Fest" },
+      { type: "image", src: "/assets/vk-fest-2.webp", w: 1280, h: 853, alt: "Очередь гостей VK Fest у фургона-геймбуса Университета Иннополис" },
+      { type: "image", src: "/assets/vk-fest-3.webp", w: 1280, h: 853, alt: "Чиллаут-зона с креслами-мешками у геймбуса Университета Иннополис на VK Fest в Казани" }
+    ]
+  },
+  {
     id: "game-open-lab",
     title: "Game Open Lab",
     category: "Ивент",
@@ -214,7 +225,8 @@ window.PLAIR_CASES = [
     media: [
       { type: "image", src: "/assets/naydi-oshibku-1.webp", w: 2000, h: 1124, alt: "Интерфейс отслеживания отправления со спрятанными ошибками в игре «Найди ошибку»" },
       { type: "image", src: "/assets/naydi-oshibku-2.webp", w: 2000, h: 1123, alt: "Экран регистрации участника с маскотом Почтатеха в игре «Найди ошибку»" },
-      { type: "image", src: "/assets/naydi-oshibku-3.webp", w: 2000, h: 1125, alt: "Экран правил игры «Найди ошибку» для Почтатеха" }
+      { type: "image", src: "/assets/naydi-oshibku-3.webp", w: 2000, h: 1125, alt: "Экран правил игры «Найди ошибку» для Почтатеха" },
+      { type: "image", src: "/assets/naydi-oshibku-4.webp", w: 960, h: 1280, alt: "Стенд Почтатеха с игрой «Найди ошибку» на планшете и мерчем для победителей" }
     ]
   },
   {
