@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;800&display=swap">
 <link rel="stylesheet" href="/styles.css?v=41">
-<link rel="stylesheet" href="/games/games.css?v=26">
+<link rel="stylesheet" href="/games/games.css?v=27">
 </head>
 <body>
 <a class="skip-link" href="#feed">Skip to the games</a>
@@ -47,5 +47,38 @@
   <p class="g-hint" style="margin:40vh auto;text-align:center">Loading the catalogue&hellip;</p>
 </main>
 
-<script src="/games/games.js?v=26" defer></script>
+<dialog id="contact-dialog" class="contact-dialog" aria-labelledby="contact-title" aria-describedby="form-status">
+  <div class="contact-inner">
+    <div class="contact-top"><span>PLAIR / CONTACT</span><button type="button" class="close-button" id="contact-close" aria-label="Close the form"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 16M20 4 4 20"/></svg></button></div>
+    <h2 id="contact-title">Let&rsquo;s<br>talk<br>games.</h2>
+    <form id="contact-form">
+      <div class="form-fields">
+        <label class="field"><span>Your name</span><input type="text" name="name" autocomplete="name" required maxlength="120"></label>
+        <label class="field"><span>Email or Telegram</span><input type="text" name="contact" autocomplete="off" autocapitalize="none" spellcheck="false" required maxlength="180" aria-describedby="contact-error"><small id="contact-error" class="field-error" hidden>Enter an email or a Telegram @username.</small></label>
+        <label class="field"><span>Subject</span><input type="text" name="subject" maxlength="140" autocomplete="off"></label>
+        <label class="field project-field"><span>Message</span><textarea name="message" rows="3" required maxlength="5000"></textarea></label>
+        <div class="honeypot" aria-hidden="true"><label>Website<input name="_gotcha" type="text" tabindex="-1" autocomplete="off"></label></div>
+      </div>
+      <div class="sending" id="form-sending" aria-hidden="true">
+        <div class="cube-scene">
+          <div class="cube-lift"><div class="cube"><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
+          <div class="cube-glow"></div>
+          <div class="cube-plinth"></div>
+        </div>
+        <p class="sending-text">Sending your message&hellip;</p>
+      </div>
+      <div class="form-bottom">
+        <div class="walker" aria-hidden="true"></div>
+        <p class="form-status" id="form-status" role="status"></p>
+        <button class="button solid" id="contact-submit" type="submit">
+          <span class="blob" aria-hidden="true"></span><span class="f1">Send</span>
+          <span class="f2" aria-hidden="true">Send<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<script src="/content.js?v=41" defer></script>
+<script src="/games/games.js?v=27" defer></script>
 </body></html>

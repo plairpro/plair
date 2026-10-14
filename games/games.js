@@ -407,8 +407,136 @@
         'hands you the text and you commit it yourself &mdash; which is also why the page currently ' +
         'takes your word for who you are.</p>' +
 
+      '<p class="g-contact"><button type="button" class="g-link" data-contact>Contact us</button></p>' +
+
       '</div>');
   }
+
+  /* ── связаться ───────────────────────────────────────── */
+  /* Та же форма, что «Связь» у студии, только по-английски и с полями
+     «тема» и «сообщение». Куда слать, берётся из настроек студии
+     (window.PLAIR_CONFIG в /content.js) — здесь ключей нет. */
+  var cfg = window.PLAIR_CONFIG || {};
+  var cTg = cfg.formService === 'telegram' && cfg.telegramToken && cfg.telegramChat
+    ? { token: String(cfg.telegramToken).trim(), chat: String(cfg.telegramChat).trim() } : null;
+  var cMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cfg.contactEmail || '') ? cfg.contactEmail : '';
+  var cDialog = $('contact-dialog'), cForm = $('contact-form'), cStatus = $('form-status'),
+      cSubmit = $('contact-submit'), cSending = false, cBot = false;
+
+  function cLabel(text) {
+    var face = cSubmit.querySelector('.f1'), hover = cSubmit.querySelector('.f2');
+    if (face) face.textContent = text;
+    if (hover && hover.firstChild) hover.firstChild.nodeValue = text;
+  }
+  function cBusy(on) {
+    var scr = $('form-sending'), fields = cForm.querySelector('.form-fields');
+    if (scr) scr.classList.toggle('is-on', on);
+    if (fields) fields.inert = on;
+    cForm.setAttribute('aria-busy', String(on));
+  }
+  function cMailBody(d) {
+    return 'Name: ' + d.name + '\nContact: ' + d.contact + '\nSubject: ' + (d.subject || '—') +
+      '\n\nMessage:\n' + d.message;
+  }
+  function cMailHref(d) {
+    return 'mailto:' + cMail + '?subject=' + encodeURIComponent(d.subject || 'Message from PLAIR Games') +
+      '&body=' + encodeURIComponent(cMailBody(d));
+  }
+  function cSend(d) {
+    var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+    var text = ['<b>Message from PLAIR Games</b>', '',
+      '<b>Name:</b> ' + e(d.name), '<b>Contact:</b> ' + e(d.contact),
+      '<b>Subject:</b> ' + e(d.subject || '—'), '', '<b>Message:</b>', e(d.message)].join('\n');
+    var ctl = window.AbortController ? new AbortController() : null;
+    var t = setTimeout(function () { if (ctl) ctl.abort(); }, 20000);
+    return fetch('https://api.telegram.org/bot' + encodeURIComponent(cTg.token) + '/sendMessage', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: cTg.chat, text: text, parse_mode: 'HTML', disable_web_page_preview: true }),
+      signal: ctl ? ctl.signal : undefined
+    }).then(function (r) {
+      return r.json().catch(function () { return null; }).then(function (j) { return !!(r.ok && j && j.ok === true); });
+    }).finally(function () { clearTimeout(t); });
+  }
+
+  function openContact() {
+    if (!cDialog) return;
+    shut();
+    if (!cBot) {
+      cBot = true;
+      var host = cDialog.querySelector('.walker');
+      if (host) import('/robot.js?v=27').then(function (m) { m.mount(host); }).catch(function () {});
+    }
+    document.documentElement.style.overflow = 'hidden';
+    cDialog.showModal();
+    $('contact-close').focus({ preventScroll: true });
+  }
+
+  if (cDialog) {
+    if (!cTg && !cMail) { cStatus.textContent = 'The form is not taking messages yet.'; cSubmit.disabled = true; }
+    else if (!cTg) cStatus.textContent = 'Your mail app will open with the message filled in.';
+    $('contact-close').addEventListener('click', function () { cDialog.close(); });
+    cDialog.addEventListener('click', function (ev) { if (!ev.target.closest('.contact-inner')) cDialog.close(); });
+    cDialog.addEventListener('close', function () { document.documentElement.style.overflow = ''; });
+    var cContact = cForm.elements.contact;
+    cContact.addEventListener('input', function () {
+      cContact.setCustomValidity(''); cContact.removeAttribute('aria-invalid'); $('contact-error').hidden = true;
+    });
+    cForm.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      if (cSending || (!cTg && !cMail)) return;
+      var d = {};
+      ['name', 'contact', 'subject', 'message', '_gotcha'].forEach(function (k) {
+        d[k] = String((cForm.elements[k] && cForm.elements[k].value) || '').trim();
+      });
+      if (d._gotcha) return;
+      if (!d.name || !d.message) {
+        cStatus.textContent = 'Please add your name and a message.';
+        cStatus.className = 'form-status error';
+        return;
+      }
+      var ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.contact) || /^@[a-zA-Z][a-zA-Z0-9_]{4,31}$/.test(d.contact) ||
+        /^https:\/\/t\.me\/[a-zA-Z][a-zA-Z0-9_]{4,31}\/?$/.test(d.contact);
+      if (!ok) {
+        cContact.setCustomValidity('Enter an email or a Telegram @username.');
+        cContact.setAttribute('aria-invalid', 'true');
+        $('contact-error').hidden = false;
+        cContact.reportValidity();
+        return;
+      }
+      if (!cTg) {
+        location.href = cMailHref(d);
+        cStatus.textContent = 'Your message is ready — send it from your mail app.';
+        return;
+      }
+      cSending = true; cSubmit.disabled = true; cLabel('Sending…');
+      cStatus.textContent = ''; cStatus.className = 'form-status';
+      cBusy(true);
+      var started = Date.now();
+      cSend(d).then(function (delivered) {
+        if (!delivered) throw new Error('not accepted');
+        cStatus.textContent = 'Thank you! Your message is on its way. We will get back to you soon.';
+        cStatus.className = 'form-status success';
+        cForm.reset();
+      }).catch(function () {
+        // Сообщение не теряется: текст остаётся в форме, рядом — письмо с ним же.
+        cStatus.textContent = 'Could not send it. Your text is still here — try again or ';
+        cStatus.className = 'form-status error';
+        if (cMail) {
+          var a = document.createElement('a');
+          a.href = cMailHref(d); a.textContent = 'email us';
+          cStatus.appendChild(a);
+        }
+      }).then(function () {
+        return new Promise(function (r) { setTimeout(r, Math.max(0, 900 - (Date.now() - started))); });
+      }).then(function () {
+        cBusy(false); cSending = false; cSubmit.disabled = false; cLabel('Send');
+      });
+    });
+  }
+
+  document.addEventListener('click', function (ev) {
+    if (ev.target.closest && ev.target.closest('[data-contact]')) openContact();
+  });
 
   /* ── имя пользователя ────────────────────────────────── */
 

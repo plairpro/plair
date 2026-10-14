@@ -365,4 +365,8 @@
   overflow-wrap:anywhere}
 .g-toast.is-on{opacity:1;transform:translate(-50%,0)}
 
+/* «Contact us» в самом низу справки. */
+.g-contact{margin:28px 0 4px;padding-top:18px;border-top:1px solid var(--line);text-align:center}
+.g-contact .g-link{font-size:15px;font-weight:600;color:var(--accent)}
+
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
