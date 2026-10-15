@@ -896,7 +896,12 @@
   /* Ссылка ведёт в ленту и ставит её на эту игру, но не запускает:
      звук без касания браузер всё равно не даст, а человек сперва
      хочет посмотреть, куда его позвали. */
-  function shareURL(g) { return 'https://plair.pro/?g=' + encodeURIComponent(g.id); }
+  /* Одна ссылка на игру везде: и в «поделиться», и в строке адреса во
+     время игры — /?g=<id> на том же домене, где открыта лента. */
+  function shareURL(g) {
+    var host = /(^|\.)plair\.pro$/.test(location.hostname) ? location.origin : 'https://plair.pro';
+    return host + '/?g=' + encodeURIComponent(g.id);
+  }
   function shareText(g) { return g.title + ' — play it on PLAIR Games'; }
 
   function shareHref(net, g) {
@@ -1536,7 +1541,13 @@
     document.body.appendChild(p);
     document.body.style.overflow = 'hidden';
     player = p;
-    if (!opts.noHash) history.pushState({ play: g.id }, '', '#play-' + g.id);
+    if (!opts.noHash) {
+      var pu = new URL(location.href);
+      pu.searchParams.set('g', g.id);
+      pu.searchParams.delete('c');
+      pu.hash = '';
+      history.pushState({ play: g.id }, '', pu.pathname + pu.search);
+    }
     if (!opts.preview) countPlay(g);
     keepAwake();
 
@@ -1613,7 +1624,7 @@
     player.remove();
     player = null;
     if (!open) document.body.style.overflow = '';
-    if (location.hash.indexOf('#play-') === 0) history.back();
+    if (history.state && history.state.play) history.back();
   }
 
   /* ── события ─────────────────────────────────────────── */
@@ -1813,6 +1824,11 @@
       renderFeed();
       /* Пришли по ссылке «поделиться»: ставим ленту на эту игру. */
       var want = new URLSearchParams(location.search).get('g');
+      var oldHash = location.hash.match(/^#play-([a-z0-9-]+)$/);
+      if (!want && oldHash) {
+        want = oldHash[1];
+        try { history.replaceState(null, '', location.pathname + '?g=' + want); } catch (e) {}
+      }
       var hit = want && [].filter.call(document.querySelectorAll('#feed .g-slide'), function (s) {
         return s.dataset.id === want;
       })[0];
