@@ -166,19 +166,34 @@
 
   /* ── запросы к GitHub ────────────────────────────────── */
 
+  /* GitHub без входа отвечает одному адресу 60 раз в час — на всех, кто
+     сидит за тем же роутером или VPN. Поэтому ответы запоминаем, а если
+     лимит всё же кончился, проверяем другим путём (см. ниже), а не
+     заставляем человека ждать час. */
+  var ghCache = {};
+  try { ghCache = JSON.parse(sessionStorage.getItem('plair-gh') || '{}') || {}; } catch (e) { ghCache = {}; }
   function gh(path) {
+    var key = path.toLowerCase();
+    if (ghCache[key]) return Promise.resolve(ghCache[key]);
     return fetch(API + path, { headers: { Accept: 'application/vnd.github+json' } })
       .then(function (r) {
         if (r.status === 404) return { missing: true };
         if (r.status === 403 || r.status === 429) {
           return r.json().catch(function () { return {}; }).then(function (j) {
-            throw new Error(/rate limit/i.test(j.message || '')
-              ? 'GitHub is rate-limiting this address. Unsigned requests are capped at 60 an hour; wait a bit and try again.'
+            var e = new Error(/rate limit/i.test(j.message || '')
+              ? 'GitHub is busy right now. Try again in a little while.'
               : 'GitHub refused the request.');
+            e.limited = /rate limit/i.test(j.message || '') || r.status === 429;
+            throw e;
           });
         }
         if (!r.ok) throw new Error('GitHub answered ' + r.status + '.');
         return r.json();
+      })
+      .then(function (j) {
+        ghCache[key] = j;
+        try { sessionStorage.setItem('plair-gh', JSON.stringify(ghCache)); } catch (e) {}
+        return j;
       });
   }
 
@@ -590,6 +605,13 @@
       saveMe();
       if (thenSubmit) { thenSubmit = false; submitSheet(true); } else shut();
     }).catch(function (err) {
+      if (err.limited) {
+        // GitHub занят — верим на слово: ник всё равно сверится с адресом игры.
+        me = { login: login, name: login };
+        saveMe();
+        if (thenSubmit) { thenSubmit = false; submitSheet(true); } else shut();
+        return;
+      }
       msg.className = 'g-hint bad';
       msg.textContent = err.message;
     });
@@ -649,6 +671,10 @@
     var m = String(raw || '').trim()
       .replace(/^https?:\/\//, '').replace(/^www\./, '')
       .match(/^github\.com\/([A-Za-z0-9-]+)\/([A-Za-z0-9._-]+?)(?:\.git)?\/?$/);
+    if (m) return { owner: m[1], repo: m[2] };
+    // Можно вставить и адрес самой игры: name.github.io/project.
+    m = String(raw || '').trim().replace(/^https?:\/\//, '')
+      .match(/^([A-Za-z0-9-]+)\.github\.io\/([A-Za-z0-9._-]+?)\/?(?:index\.html)?$/i);
     return m ? { owner: m[1], repo: m[2] } : null;
   }
 
@@ -664,7 +690,7 @@
     var p = parseRepo(raw);
     if (!p) {
       msg.className = 'g-hint bad';
-      msg.textContent = 'That is not a repository address. It looks like github.com/name/project.';
+      msg.textContent = 'Paste the repository (github.com/name/project) or the game address (name.github.io/project).';
       return Promise.resolve(null);
     }
     msg.className = 'g-hint busy';
@@ -702,9 +728,39 @@
         return found;
       });
     }).catch(function (err) {
+      if (err.limited) return checkRepoOffline(p, msg);
       msg.className = 'g-hint bad';
       msg.textContent = err.message;
       return null;
+    });
+  }
+
+  /* Запасная проверка, когда GitHub API исчерпал лимит: хозяина берём из
+     адреса репозитория, а саму игру спрашиваем у GitHub Pages напрямую —
+     у Pages своего лимита нет, и они отвечают любому сайту. */
+  function checkRepoOffline(p, msg) {
+    if (p.owner.toLowerCase() !== me.login.toLowerCase()) {
+      msg.className = 'g-hint bad';
+      msg.textContent = 'That repository belongs to @' + p.owner + ', not you. Only your own games go here.';
+      return Promise.resolve(null);
+    }
+    return customDomain(p.owner, p.repo).then(function (domain) {
+      var url = domain ? 'https://' + domain + '/'
+                       : 'https://' + p.owner.toLowerCase() + '.github.io/' + p.repo + '/';
+      return fetch(url, { cache: 'no-store' }).then(function (r) { return r.ok; }, function () { return null; })
+        .then(function (ok) {
+          if (ok === false) {
+            msg.className = 'g-hint bad';
+            msg.textContent = 'Nothing plays at ' + url + ' yet. Check that GitHub Pages is on for this repository.';
+            return null;
+          }
+          found = { owner: p.owner, repo: p.repo, url: url,
+                    html: 'https://github.com/' + p.owner + '/' + p.repo, blurb: '' };
+          msg.className = 'g-hint good';
+          msg.innerHTML = 'Plays at <code>' + esc(url) + '</code>.' +
+            ' <button type="button" id="f-try" class="g-link">Try it in the player</button>';
+          return found;
+        });
     });
   }
 
