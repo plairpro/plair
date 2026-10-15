@@ -315,16 +315,18 @@
 /* В ленте: кнопка в правом нижнем углу кадра, сети выезжают столбиком
    вверх. В проигрывателе: кнопка в плашке, сети — строкой влево. */
 .g-share{position:absolute;z-index:4;right:12px;bottom:calc(20px + env(safe-area-inset-bottom,0px))}
-.g-share-btn:not(.g-x){width:40px;height:40px;border-radius:50%;cursor:pointer;display:grid;place-items:center;
+.g-share-btn:not(.g-x){width:34px;height:34px;border-radius:50%;cursor:pointer;display:grid;place-items:center;
   border:1px solid rgba(255,255,255,.34);background:rgba(6,8,6,.42);background-clip:padding-box;
   color:#fff;transition:border-color .18s ease,color .18s ease,background .18s ease}
 .g-share-btn:not(.g-x):hover,.g-share.is-open .g-share-btn:not(.g-x){border-color:var(--accent);color:var(--accent)}
 .g-share.is-bar.is-open .g-share-btn{border-color:var(--accent);color:var(--accent)}
-.g-share-btn svg{width:18px;height:18px}
+.g-share-btn svg{width:16px;height:16px}
 .g-share-btn.g-x svg{width:16px;height:16px}
 .g-line{fill:none!important;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .g-share-list{position:absolute;display:flex;gap:8px;visibility:hidden;pointer-events:none}
-.g-share.is-rail .g-share-list{bottom:calc(100% + 8px);right:2px;flex-direction:column-reverse}
+.g-share.is-rail .g-share-list{bottom:calc(100% + 8px);right:1px;flex-direction:column-reverse}
+.g-share.is-rail .g-sh{width:32px;height:32px}
+.g-share.is-rail .g-sh svg{width:15px;height:15px}
 .g-sh{--c:var(--accent);width:36px;height:36px;border-radius:50%;flex:none;display:grid;place-items:center;
   border:1px solid rgba(255,255,255,.22);background:rgba(6,8,6,.62);color:#fff;cursor:pointer;
   text-decoration:none;opacity:0;transform:translateY(10px) scale(.85);
@@ -341,7 +343,7 @@
 .g-sh.is-vk{--c:#0077FF}
 .g-sh.is-copy:hover,.g-sh.is-copy:focus-visible,.g-sh.is-done{background:var(--accent);border-color:var(--accent);color:#06140a}
 /* Подпись в ленте не заезжает под кнопку. */
-.g-slide .g-info{padding-right:64px}
+.g-slide .g-info{padding-right:58px}
 
 /* Плашка проигрывателя: строка ложится поверх названия, кнопка остаётся
    на месте и закрывает строку обратно. */
@@ -375,16 +377,16 @@
 /* ── комментарии ────────────────────────────────────────── */
 /* Кнопка — над «поделиться», число под ней. Пока сети раскрыты,
    кнопка уходит: столбик сетей ложится на её место. */
-.g-talk{position:absolute;z-index:3;right:12px;bottom:calc(74px + env(safe-area-inset-bottom,0px));
-  width:40px;padding:0;border:0;background:none;color:#fff;cursor:pointer;
+.g-talk{position:absolute;z-index:3;right:12px;bottom:calc(62px + env(safe-area-inset-bottom,0px));
+  width:34px;padding:0;border:0;background:none;color:#fff;cursor:pointer;
   display:flex;flex-direction:column;align-items:center;gap:4px;transition:opacity .15s ease}
-.g-talk-ico{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;
+.g-talk-ico{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;
   border:1px solid rgba(255,255,255,.34);background:rgba(6,8,6,.42);background-clip:padding-box;
   transition:border-color .18s ease,color .18s ease}
-.g-talk-ico svg{width:19px;height:19px}
+.g-talk-ico svg{width:16px;height:16px}
 .g-talk:hover .g-talk-ico,.g-talk:focus-visible .g-talk-ico{border-color:var(--accent);color:var(--accent)}
 .g-talk:focus-visible{outline:none}
-.g-talk-n{font-size:12px;font-weight:600;line-height:1;min-height:12px;
+.g-talk-n{font-size:11px;font-weight:600;line-height:1;min-height:11px;
   text-shadow:0 1px 3px rgba(0,0,0,.7)}
 .g-pane:has(.g-share.is-open) .g-talk{opacity:0;pointer-events:none}
 
