@@ -1140,13 +1140,14 @@
       foot.innerHTML = '';
       box.innerHTML = ps.length
         ? '<p class="g-c-ask">Sign in to join the conversation.</p><div class="g-auth">' +
-          (ps.indexOf('google') !== -1 ? '<button class="g-auth-btn" type="button" data-signin="google">' +
-            ICON_GOOGLE + 'Continue with Google</button>' : '') +
+          (ps.indexOf('google') !== -1 ? '<div class="g-gbtn" id="c-google"></div>' : '') +
           (ps.indexOf('github') !== -1 ? '<button class="g-auth-btn" type="button" data-signin="github">' +
             ICON_GITHUB + 'Continue with GitHub</button>' : '') +
           '</div><p class="g-hint">We only keep your name and picture to show next to what you write. ' +
           'No email, no password.</p>'
         : '<p class="g-hint">Commenting opens soon.</p>';
+      var gb = box.querySelector('#c-google');
+      if (gb) googleButton(gb);
       return;
     }
     var draft = '';
@@ -1181,6 +1182,58 @@
       if (ta.value) sessionStorage.setItem(draftKey(talk.g), ta.value);
       else sessionStorage.removeItem(draftKey(talk.g));
     } catch (e) {}
+  }
+
+  /* Вход через Google — их собственной кнопкой: она открывает окно
+     Google, а нам отдаёт подписанный паспорт, который Worker проверяет.
+     Скрипт Google грузим только тогда, когда кнопка правда нужна. */
+  var gisLoading = null, gisReady = false;
+  function loadGIS() {
+    if (window.google && google.accounts && google.accounts.id) return Promise.resolve();
+    if (!gisLoading) {
+      gisLoading = new Promise(function (ok, no) {
+        var sc = document.createElement('script');
+        sc.src = 'https://accounts.google.com/gsi/client';
+        sc.async = true;
+        sc.onload = ok;
+        sc.onerror = function () { gisLoading = null; no(new Error('gis')); };
+        document.head.appendChild(sc);
+      });
+    }
+    return gisLoading;
+  }
+
+  function googleButton(el) {
+    el.innerHTML = '<button class="g-auth-btn" type="button" disabled>' + ICON_GOOGLE + 'Continue with Google</button>';
+    loadGIS().then(function () {
+      if (!gisReady) {
+        google.accounts.id.initialize({
+          client_id: talkCfg.google, callback: onGoogle, ux_mode: 'popup',
+          auto_select: false, cancel_on_tap_outside: true, context: 'signin'
+        });
+        gisReady = true;
+      }
+      if (!el.isConnected) return;
+      el.innerHTML = '';
+      google.accounts.id.renderButton(el, {
+        type: 'standard', theme: 'filled_black', shape: 'pill', size: 'large',
+        text: 'continue_with', logo_alignment: 'center',
+        width: Math.max(200, Math.min(400, Math.floor(el.getBoundingClientRect().width) || 320))
+      });
+    }).catch(function () {
+      if (el.isConnected) el.innerHTML = '<p class="g-hint bad">Google sign-in would not load. Check the connection and reopen this panel.</p>';
+    });
+  }
+
+  function onGoogle(resp) {
+    api('/auth/google/token', { method: 'POST', body: { credential: resp && resp.credential } }).then(function (d) {
+      if (!d.ok || !d.session) throw new Error('google');
+      session = d.session;
+      try { localStorage.setItem(SESSION_KEY, session); } catch (e) { /* приватное окно */ }
+      meUser = d.user;
+      if (talk && open === talk.s) { drawBox(); reloadList(); }
+      toast('Signed in as ' + d.user.name);
+    }).catch(function () { toast('Sign-in did not go through. Try again.'); });
   }
 
   var WHY = {

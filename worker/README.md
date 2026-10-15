@@ -30,6 +30,21 @@ cd ~/Documents/plair/site/worker
 Скрипт можно запускать повторно — например, чтобы добавить вход через
 GitHub позже. База и ключ подписи пропусков второй раз не создаются.
 
+Можно и без скрипта, мышкой в панели Cloudflare: создать базу D1
+`plair-counts`, создать Worker `plair-counts`, вставить код из
+`src/worker.js`, привязать базу под именем `DB` и добавить переменную
+`GOOGLE_CLIENT_ID`. Таблицы и ключ подписи Worker создаст себе сам при
+первом запросе.
+
+### Вход через Google
+
+Работает на публичном Client ID — секретный ключ Google не нужен.
+Кнопка «Sign in with Google» отдаёт странице подписанный Google’ом
+паспорт, Worker проверяет подпись по открытым ключам Google и что паспорт
+выписан именно нашему Client ID. В Google Cloud у клиента типа Web
+application должны быть указаны Authorized JavaScript origins
+`https://plair.pro` и `https://www.plair.pro`.
+
 ## Что хранится
 
 **Счётчики.** Запуски, лайки и число комментариев на игру, плюс случайный
@@ -73,7 +88,8 @@ npx wrangler d1 execute plair-counts --remote --command "UPDATE users SET banned
 | `POST /play` `{id, visitor}` | засчитывает запуск, не чаще 10 раз в сутки с браузера на игру |
 | `POST /like` `{id, visitor, on}` | лайк, один с браузера на игру |
 | `GET /config` | какие входы настроены |
-| `GET /auth/google`, `/auth/github` `?back=…` | вход; возвращает на `back` с пропуском |
+| `POST /auth/google/token` `{credential}` | вход через Google: паспорт → пропуск |
+| `GET /auth/github?back=…` | вход через GitHub; возвращает на `back` с пропуском |
 | `GET /me` | кто вошёл |
 | `DELETE /me` | стереть свои комментарии и запись о себе |
 | `GET /comments?game=…&before=…` | комментарии к игре, по 20, новые сверху |

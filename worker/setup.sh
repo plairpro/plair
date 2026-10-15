@@ -64,12 +64,11 @@ cat <<EOF
   1. Откройте https://console.cloud.google.com/auth/overview и создайте проект PLAIR
      (Get started: имя приложения PLAIR, ваша почта, Audience — External).
   2. Clients → Create client → Web application.
-     Authorized redirect URIs:  $URL/auth/google/callback
+     Authorized JavaScript origins:  https://plair.pro  и  https://www.plair.pro
   3. Audience → Publish app — иначе войти смогут только тестовые аккаунты.
-  Скопируйте Client ID и Client secret сюда.
+  Скопируйте Client ID сюда (он публичный, секрет Google не нужен).
 EOF
 put GOOGLE_CLIENT_ID "Google Client ID (Enter — пропустить)"
-put GOOGLE_CLIENT_SECRET "Google Client secret" hidden
 
 say "5/6 Вход через GitHub"
 cat <<EOF

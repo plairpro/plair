@@ -98,13 +98,26 @@ function unb64u(str) {
   return out;
 }
 
+/* Ключ подписи. Можно задать секретом SESSION_SECRET; если его нет,
+   Worker при первом запуске сам придумывает случайный ключ и хранит его
+   в своей же базе — настраивать руками ничего не нужно. */
 let keyCache = null, keyFor = '';
+async function secret(env) {
+  if (env.SESSION_SECRET) return env.SESSION_SECRET;
+  let row = await env.DB.prepare("SELECT value FROM meta WHERE key = 'session_secret'").first();
+  if (!row) {
+    const fresh = Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, '0')).join('');
+    // INSERT OR IGNORE: если два запроса пришли разом, побеждает первый.
+    await env.DB.prepare("INSERT OR IGNORE INTO meta (key, value) VALUES ('session_secret', ?)").bind(fresh).run();
+    row = await env.DB.prepare("SELECT value FROM meta WHERE key = 'session_secret'").first();
+  }
+  return row.value;
+}
 async function key(env) {
-  if (!env.SESSION_SECRET) throw new Error('SESSION_SECRET is not set');
-  if (keyCache && keyFor === env.SESSION_SECRET) return keyCache;
-  keyFor = env.SESSION_SECRET;
-  keyCache = await crypto.subtle.importKey('raw', enc.encode(env.SESSION_SECRET),
-    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
+  const s = await secret(env);
+  if (keyCache && keyFor === s) return keyCache;
+  keyFor = s;
+  keyCache = await crypto.subtle.importKey('raw', enc.encode(s), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
   return keyCache;
 }
 
@@ -146,37 +159,64 @@ function cleanName(v) {
   return String(v || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
 }
 
+/* Google: кнопка «Sign in with Google» на странице сама отдаёт нам
+   подписанный Google’ом паспорт (ID-токен). Проверяем подпись по открытым
+   ключам Google и что паспорт выписан именно нашему сайту. Секретный
+   ключ Google для этого не нужен — только публичный Client ID. */
+let gKeys = null, gKeysAt = 0;
+async function googleKeys(fresh) {
+  // Свежие ключи — не чаще раза в пять минут, иначе чужие запросы с
+  // выдуманным kid заставят нас дёргать Google на каждый вызов.
+  if (gKeys && Date.now() - gKeysAt < (fresh ? 300e3 : 3600e3)) return gKeys;
+  const r = await fetch('https://www.googleapis.com/oauth2/v3/certs');
+  if (!r.ok) throw new Error('google keys');
+  gKeys = (await r.json()).keys || [];
+  gKeysAt = Date.now();
+  return gKeys;
+}
+
+async function verifyGoogle(env, jwt) {
+  const parts = String(jwt || '').split('.');
+  if (parts.length !== 3 || jwt.length > 4000) throw new Error('shape');
+  const head = JSON.parse(dec.decode(unb64u(parts[0])));
+  if (head.alg !== 'RS256' || !head.kid) throw new Error('alg');
+  let k = (await googleKeys(false)).find((x) => x.kid === head.kid);
+  if (!k) k = (await googleKeys(true)).find((x) => x.kid === head.kid);   // Google сменил ключи
+  if (!k) throw new Error('kid');
+  const pub = await crypto.subtle.importKey('jwk', { kty: 'RSA', n: k.n, e: k.e, alg: 'RS256', ext: true },
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
+  const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', pub, unb64u(parts[2]), enc.encode(parts[0] + '.' + parts[1]));
+  if (!ok) throw new Error('signature');
+  const c = JSON.parse(dec.decode(unb64u(parts[1])));
+  if (c.aud !== env.GOOGLE_CLIENT_ID) throw new Error('aud');
+  if (c.iss !== 'accounts.google.com' && c.iss !== 'https://accounts.google.com') throw new Error('iss');
+  if (typeof c.exp !== 'number' || c.exp < now() - 60 || !c.sub) throw new Error('exp');
+  return { id: 'google:' + c.sub, name: cleanName(c.name || c.given_name) || 'Player',
+           avatar: c.picture || null, login: null };
+}
+
+async function saveUser(env, p) {
+  await env.DB.prepare(
+    'INSERT INTO users (id, name, avatar, login, created) VALUES (?, ?, ?, ?, ?) ' +
+    'ON CONFLICT(id) DO UPDATE SET name = excluded.name, avatar = excluded.avatar, login = excluded.login'
+  ).bind(p.id, p.name, p.avatar, p.login, now()).run();
+  return seal(env, { k: 's', u: p.id, e: now() + SESSION_DAYS * 86400 });
+}
+
+async function googleSignIn(env, origin, body) {
+  if (!env.GOOGLE_CLIENT_ID) return reply(env, origin, { ok: false, why: 'off' }, { status: 404 });
+  let p;
+  try { p = await verifyGoogle(env, body && body.credential); }
+  catch (e) { return reply(env, origin, { ok: false, why: 'google' }, { status: 401 }); }
+  const session = await saveUser(env, p);
+  const u = await env.DB.prepare('SELECT id, name, avatar, login FROM users WHERE id = ?').bind(p.id).first();
+  return reply(env, origin, { ok: true, session: session, user: Object.assign(publicUser(u), { id: u.id }) });
+}
+
+/* GitHub: обычный вход с переходом на github.com и обратно. Ему нужен
+   секретный ключ приложения (GITHUB_CLIENT_SECRET); пока его нет,
+   кнопка GitHub просто не показывается. */
 const PROVIDERS = {
-  google: {
-    ready: (env) => !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
-    start(env, redirect, state) {
-      return 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
-        client_id: env.GOOGLE_CLIENT_ID, redirect_uri: redirect, response_type: 'code',
-        scope: 'openid profile', state: state, prompt: 'select_account'
-      });
-    },
-    async profile(env, code, redirect) {
-      const r = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          code: code, client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET,
-          redirect_uri: redirect, grant_type: 'authorization_code'
-        })
-      });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok || !j.id_token) throw new Error('google: no token');
-      /* Токен пришёл нам напрямую от Google по TLS — по спецификации
-         OpenID его подпись в этом случае можно не проверять. Сверяем,
-         кому и кем он выдан. */
-      const c = JSON.parse(dec.decode(unb64u(String(j.id_token).split('.')[1] || '')));
-      if (c.aud !== env.GOOGLE_CLIENT_ID || !/^(https:\/\/)?accounts\.google\.com$/.test(c.iss) || !c.sub) {
-        throw new Error('google: bad claims');
-      }
-      return { id: 'google:' + c.sub, name: cleanName(c.name || c.given_name) || 'Player',
-               avatar: c.picture || null, login: null };
-    }
-  },
   github: {
     ready: (env) => !!(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET),
     start(env, redirect, state) {
@@ -243,12 +283,7 @@ async function authDone(env, request, url, provider) {
   try { p = await PROVIDERS[provider].profile(env, code, url.origin + '/auth/' + provider + '/callback'); }
   catch (e) { return fail('failed'); }
 
-  await env.DB.prepare(
-    'INSERT INTO users (id, name, avatar, login, created) VALUES (?, ?, ?, ?, ?) ' +
-    'ON CONFLICT(id) DO UPDATE SET name = excluded.name, avatar = excluded.avatar, login = excluded.login'
-  ).bind(p.id, p.name, p.avatar, p.login, now()).run();
-
-  const token = await seal(env, { k: 's', u: p.id, e: now() + SESSION_DAYS * 86400 });
+  const token = await saveUser(env, p);
   // Пропуск уходит во фрагменте адреса: он не попадает ни в логи, ни
   // в заголовок Referer, а страница сразу убирает его из строки.
   return go(st.b + '#session=' + token, clear);
@@ -432,6 +467,32 @@ async function counters(env, origin, ctx, url, body) {
   return reply(env, origin, { ok: true, on: on, likes: (cur && cur.likes) || 0 });
 }
 
+/* ── таблицы ────────────────────────────────────────────── */
+/* Worker сам создаёт свои таблицы при первом запросе — отдельно
+   запускать schema.sql не нужно (он лежит рядом для справки). */
+const SCHEMA = [
+  'CREATE TABLE IF NOT EXISTS games (id TEXT PRIMARY KEY, plays INTEGER NOT NULL DEFAULT 0, ' +
+    'likes INTEGER NOT NULL DEFAULT 0, comments INTEGER NOT NULL DEFAULT 0)',
+  'CREATE TABLE IF NOT EXISTS plays_today (visitor TEXT NOT NULL, game TEXT NOT NULL, day TEXT NOT NULL, ' +
+    'n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (visitor, game, day))',
+  'CREATE INDEX IF NOT EXISTS plays_today_day ON plays_today (day)',
+  'CREATE TABLE IF NOT EXISTS likes (visitor TEXT NOT NULL, game TEXT NOT NULL, PRIMARY KEY (visitor, game))',
+  'CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT NOT NULL, avatar TEXT, login TEXT, ' +
+    'created INTEGER NOT NULL, banned INTEGER NOT NULL DEFAULT 0)',
+  'CREATE TABLE IF NOT EXISTS comments (id INTEGER PRIMARY KEY AUTOINCREMENT, game TEXT NOT NULL, ' +
+    'user TEXT NOT NULL, text TEXT NOT NULL, created INTEGER NOT NULL)',
+  'CREATE INDEX IF NOT EXISTS comments_game ON comments (game, id DESC)',
+  'CREATE INDEX IF NOT EXISTS comments_user ON comments (user, created)',
+  'CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)'
+];
+let installed = null;
+function install(env) {
+  if (!installed) {
+    installed = env.DB.batch(SCHEMA.map((q) => env.DB.prepare(q))).catch((e) => { installed = null; throw e; });
+  }
+  return installed;
+}
+
 /* ── маршруты ──────────────────────────────────────────── */
 
 export default {
@@ -444,8 +505,16 @@ export default {
     if (m === 'OPTIONS') return new Response(null, { status: 204, headers: cors(env, origin) });
 
     try {
+      await install(env);
+
       /* вход */
-      const auth = path.match(/^\/auth\/(google|github)(\/callback)?$/);
+      if (path === '/auth/google/token' && m === 'POST') {
+        let body = null;
+        try { body = await request.json(); } catch (e) { body = null; }
+        return googleSignIn(env, origin, body);
+      }
+
+      const auth = path.match(/^\/auth\/(github)(\/callback)?$/);
       if (auth && m === 'GET') {
         if (!PROVIDERS[auth[1]].ready(env)) return new Response('This sign-in is not set up yet.', { status: 404 });
         return auth[2] ? authDone(env, request, url, auth[1]) : authStart(env, url, auth[1]);
@@ -454,7 +523,9 @@ export default {
       if (m === 'GET' && path === '/config') {
         return reply(env, origin, {
           ok: true,
-          providers: Object.keys(PROVIDERS).filter((p) => PROVIDERS[p].ready(env)),
+          providers: (env.GOOGLE_CLIENT_ID ? ['google'] : [])
+            .concat(Object.keys(PROVIDERS).filter((p) => PROVIDERS[p].ready(env))),
+          google: env.GOOGLE_CLIENT_ID || null,
           max: MAX_LEN
         }, { headers: { 'Cache-Control': 'public, max-age=300' } });
       }

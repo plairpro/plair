@@ -48,3 +48,6 @@ CREATE TABLE IF NOT EXISTS comments (
 );
 CREATE INDEX IF NOT EXISTS comments_game ON comments (game, id DESC);
 CREATE INDEX IF NOT EXISTS comments_user ON comments (user, created);
+
+-- Служебное: ключ подписи пропусков, если он не задан секретом.
+CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);

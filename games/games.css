@@ -396,6 +396,8 @@
 .g-auth-btn:hover,.g-auth-btn:focus-visible{border-color:var(--ink);outline:none}
 .g-auth-btn svg{width:18px;height:18px;fill:currentColor;flex:none}
 .g-auth + .g-hint{margin-top:10px}
+.g-gbtn{flex:1 1 220px;min-height:44px;display:flex;justify-content:center;align-items:center;color-scheme:normal}
+.g-gbtn .g-auth-btn{width:100%;opacity:.6}
 
 .g-cform{display:flex;gap:10px;align-items:flex-start}
 .g-c-ava{flex:none;width:32px;height:32px;border-radius:50%;object-fit:cover;background:var(--surface)}
