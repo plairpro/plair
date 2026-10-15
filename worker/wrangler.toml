@@ -2,11 +2,13 @@ name = "plair-counts"
 main = "src/worker.js"
 compatibility_date = "2026-10-12"
 
-# Базу нужно создать один раз и подставить сюда её id:
-#   npx wrangler d1 create plair-counts
-#   npx wrangler d1 execute plair-counts --remote --file=./schema.sql
-#   npx wrangler deploy
+# Базу создаёт ./setup.sh и сам подставляет сюда её id.
 [[d1_databases]]
 binding = "DB"
 database_name = "plair-counts"
 database_id = "ПОДСТАВИТЬ_ID_ИЗ_wrangler_d1_create"
+
+# Куда слать уведомления о новых комментариях. Сам ключ бота — секрет,
+# его кладёт ./setup.sh (wrangler secret put TG_BOT_TOKEN), в файлах его нет.
+[vars]
+TG_CHAT_ID = "876305"

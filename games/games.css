@@ -369,4 +369,72 @@
 .g-contact{margin:28px 0 4px;padding-top:18px;border-top:1px solid var(--line);text-align:center}
 .g-contact .g-link{font-size:15px;font-weight:600;color:var(--accent)}
 
+/* ── комментарии ────────────────────────────────────────── */
+/* Кнопка — над «поделиться», число под ней. Пока сети раскрыты,
+   кнопка уходит: столбик сетей ложится на её место. */
+.g-talk{position:absolute;z-index:3;right:12px;bottom:calc(74px + env(safe-area-inset-bottom,0px));
+  width:40px;padding:0;border:0;background:none;color:#fff;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:4px;transition:opacity .15s ease}
+.g-talk-ico{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;
+  border:1px solid rgba(255,255,255,.34);background:rgba(6,8,6,.42);background-clip:padding-box;
+  transition:border-color .18s ease,color .18s ease}
+.g-talk-ico svg{width:19px;height:19px}
+.g-talk:hover .g-talk-ico,.g-talk:focus-visible .g-talk-ico{border-color:var(--accent);color:var(--accent)}
+.g-talk:focus-visible{outline:none}
+.g-talk-n{font-size:12px;font-weight:600;line-height:1;min-height:12px;
+  text-shadow:0 1px 3px rgba(0,0,0,.7)}
+.g-pane:has(.g-share.is-open) .g-talk{opacity:0;pointer-events:none}
+
+.g-sheet.is-talk{max-width:560px}
+.g-cbox{margin:2px 0 14px}
+.g-c-ask{margin:0 0 12px;color:var(--ink);font-size:15px}
+.g-auth{display:flex;flex-wrap:wrap;gap:8px}
+.g-auth-btn{flex:1 1 200px;display:flex;align-items:center;justify-content:center;gap:10px;
+  min-height:46px;padding:0 16px;border-radius:999px;border:1px solid var(--line-2);background:var(--bg);
+  color:var(--ink);font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;
+  transition:border-color .15s ease}
+.g-auth-btn:hover,.g-auth-btn:focus-visible{border-color:var(--ink);outline:none}
+.g-auth-btn svg{width:18px;height:18px;fill:currentColor;flex:none}
+.g-auth + .g-hint{margin-top:10px}
+
+.g-cform{display:flex;gap:10px;align-items:flex-start}
+.g-c-ava{flex:none;width:32px;height:32px;border-radius:50%;object-fit:cover;background:var(--surface)}
+.g-c-ava.is-blank{display:grid;place-items:center;font-size:14px;font-weight:700;color:var(--muted)}
+.g-cform .g-c-ava{margin-top:6px}
+.g-cform-main{flex:1;min-width:0}
+.g-cform textarea{display:block;width:100%;min-height:44px;max-height:160px;resize:none;
+  padding:11px 13px;border-radius:12px;border:1px solid var(--line-2);background:var(--bg);
+  color:var(--ink);font:inherit;font-size:15px;line-height:1.4}
+.g-cform textarea::placeholder{color:var(--dim)}
+.g-cform textarea:focus{outline:none;border-color:var(--accent)}
+.g-cform-row{display:flex;align-items:center;gap:10px;margin-top:8px;min-height:34px}
+.g-cform-row .g-hint{margin:0}
+.g-cform-row .g-sp{flex:1}
+.g-c-count{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
+.g-c-count.bad{color:var(--danger)}
+.g-c-post{flex:none;height:34px;padding:0 18px;border:0;border-radius:999px;background:var(--accent);
+  color:var(--on-accent);font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.g-c-post:disabled{opacity:.35;cursor:default}
+
+.g-clist{border-top:1px solid var(--line)}
+.g-c{display:flex;gap:10px;padding:13px 0;border-bottom:1px solid var(--line)}
+.g-c-body{flex:1;min-width:0}
+.g-c-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px;font-size:13px}
+.g-c-head b{color:var(--ink);font-weight:600}
+.g-c-head a{color:var(--dim);text-decoration:none}
+.g-c-head a:hover{color:var(--accent)}
+.g-c-head time{color:var(--dim)}
+.g-c-del{margin-left:auto;padding:0;border:0;background:none;color:var(--dim);font:inherit;
+  font-size:12.5px;cursor:pointer}
+.g-c-del:hover,.g-c-del.is-armed{color:var(--danger)}
+.g-c-text{margin:4px 0 0;color:var(--ink);font-size:14.5px;line-height:1.45;
+  white-space:pre-wrap;overflow-wrap:anywhere}
+.g-c-none{margin:0;padding:30px 0 20px;text-align:center;color:var(--muted);font-size:14px}
+.g-cmore{display:block;margin:14px auto 2px;font-size:14px}
+.g-cmore:disabled{color:var(--dim);cursor:default}
+.g-c-me{margin:18px 0 0;text-align:center;font-size:12.5px;color:var(--dim)}
+.g-c-me .g-link{font-size:12.5px}
+.g-link.is-quiet{color:var(--dim);font-weight:500}
+.g-link.is-quiet:hover,.g-link.is-armed{color:var(--danger)}
+
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}

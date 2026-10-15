@@ -25,3 +25,26 @@ CREATE TABLE IF NOT EXISTS likes (
   game    TEXT NOT NULL,
   PRIMARY KEY (visitor, game)
 );
+
+-- ── Комментарии ─────────────────────────────────────────────
+-- Вход через Google или GitHub. Храним только то, что видно под
+-- комментарием: имя и аватар. Почту не просим и не храним.
+-- id — 'google:<sub>' или 'github:<числовой id>'.
+CREATE TABLE IF NOT EXISTS users (
+  id      TEXT PRIMARY KEY,
+  name    TEXT NOT NULL,
+  avatar  TEXT,
+  login   TEXT,                       -- ник на GitHub, для ссылки на профиль
+  created INTEGER NOT NULL,
+  banned  INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS comments (
+  id      INTEGER PRIMARY KEY AUTOINCREMENT,
+  game    TEXT NOT NULL,
+  user    TEXT NOT NULL,
+  text    TEXT NOT NULL,
+  created INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS comments_game ON comments (game, id DESC);
+CREATE INDEX IF NOT EXISTS comments_user ON comments (user, created);

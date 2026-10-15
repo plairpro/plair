@@ -122,6 +122,7 @@
           var c = d.counts[g.id];
           if (!c) return;
           g.plays = c.plays; g.likes = c.likes; g.comments = c.comments;
+          drawTalk(g);
         });
         return true;
       })
@@ -243,7 +244,7 @@
             '<a class="g-author" href="https://github.com/' + esc(g.by) + '" target="_blank" rel="noopener">@' +
               esc(g.by) + '</a>' +
           '</div></div>' +
-        shareHTML(i, 'rail') +
+        talkHTML(i) + shareHTML(i, 'rail') +
       '</div></section>';
   }
 
@@ -939,6 +940,349 @@
     }
   }, true);
 
+  /* ── комментарии ─────────────────────────────────────── */
+  /* Живут в том же Worker’е, что и счётчики (worker/README.md). Вход —
+     через Google или GitHub: Worker возвращает человека обратно в ленту
+     с подписанным пропуском во фрагменте адреса, пропуск лежит в
+     localStorage этого браузера и уходит с каждым запросом. Пароли и
+     ключи провайдеров страница не видит вовсе. Пока адреса Worker’а
+     нет, кнопки комментариев в ленте просто не появляются. */
+
+  var SESSION_KEY = 'plair-session';
+  var session = null, meUser = null, talkCfg = null, authNote = '';
+  try { session = localStorage.getItem(SESSION_KEY) || null; } catch (e) { session = null; }
+
+  (function pickUpSession() {
+    var h = location.hash, ok = h.match(/^#session=([A-Za-z0-9_.-]{20,2000})$/),
+        bad = h.match(/^#auth-error=(\w+)/);
+    if (!ok && !bad) return;
+    if (ok) {
+      session = ok[1];
+      try { localStorage.setItem(SESSION_KEY, session); } catch (e) { /* приватное окно */ }
+    }
+    authNote = ok ? 'ok' : bad[1];
+    // Пропуск из строки адреса — сразу вон: его не должно быть ни в
+    // истории, ни в ссылке, которую человек скопирует.
+    try { history.replaceState(history.state, '', location.pathname + location.search); } catch (e) {}
+  })();
+
+  function dropSession() {
+    session = null; meUser = null;
+    try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
+  }
+
+  function api(path, opts) {
+    opts = opts || {};
+    var h = {};
+    if (opts.body) h['Content-Type'] = 'application/json';
+    if (session) h.Authorization = 'Bearer ' + session;
+    return fetch(COUNTS + path, {
+      method: opts.method || 'GET', headers: h,
+      body: opts.body ? JSON.stringify(opts.body) : undefined
+    }).then(function (r) {
+      return r.json().catch(function () { return { ok: false, why: 'server' }; }).then(function (j) {
+        if (r.status === 401 && session) dropSession();
+        j.status = r.status;
+        return j;
+      });
+    });
+  }
+
+  function loadMe() {
+    if (!session) return Promise.resolve(null);
+    if (meUser) return Promise.resolve(meUser);
+    return api('/me').then(function (d) {
+      if (d.ok && d.user) meUser = d.user; else if (d.ok) dropSession();
+      return meUser;
+    }).catch(function () { return null; });
+  }
+
+  function loadCfg() {
+    if (talkCfg) return Promise.resolve(talkCfg);
+    return api('/config').then(function (d) {
+      talkCfg = d.ok ? d : { providers: [], max: 500 };
+      return talkCfg;
+    }).catch(function () { return { providers: [], max: 500 }; });
+  }
+
+  function authToast() {
+    if (authNote === 'ok') {
+      loadMe().then(function (u) { if (u) toast('Signed in as ' + u.name); });
+    } else if (authNote === 'cancelled') toast('Sign-in cancelled');
+    else toast('Sign-in did not go through. Try again.');
+    authNote = '';
+  }
+
+  var ICON_TALK = '<svg class="g-line" viewBox="0 0 24 24" aria-hidden="true">' +
+    '<path d="M20.5 11.6c0 4.3-3.8 7.7-8.5 7.7-1.2 0-2.3-.2-3.3-.6L4 20l1.3-3.7c-1.1-1.3-1.8-2.9-1.8-4.7C3.5 7.3 7.3 3.9 12 3.9s8.5 3.4 8.5 7.7z"/></svg>';
+  var ICON_GOOGLE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/></svg>';
+  var ICON_GITHUB = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>';
+
+  function compact(n) {
+    n = Number(n) || 0;
+    if (n < 1000) return String(n);
+    return (n / 1000).toFixed(n < 10000 ? 1 : 0).replace(/\.0$/, '') + 'K';
+  }
+
+  /* Кнопка сбоку карточки, над «поделиться». Число под ней — как в
+     привычных лентах; ноль не пишем. */
+  function talkHTML(i) {
+    if (!COUNTS) return '';
+    var g = games[i], n = Number(g.comments) || 0;
+    return '<button class="g-talk" type="button" data-talk="' + i + '" ' +
+      'aria-label="Comments on ' + esc(g.title) + '"><span class="g-talk-ico">' + ICON_TALK + '</span>' +
+      '<span class="g-talk-n" data-talk-n="' + esc(g.id) + '">' + (n ? compact(n) : '') + '</span></button>';
+  }
+
+  function drawTalk(g) {
+    [].forEach.call(document.querySelectorAll('[data-talk-n]'), function (el) {
+      if (el.getAttribute('data-talk-n') === g.id) el.textContent = g.comments ? compact(g.comments) : '';
+    });
+  }
+
+  function ago(t) {
+    var s = Date.now() / 1000 - t;
+    if (s < 60) return 'now';
+    if (s < 3600) return Math.floor(s / 60) + 'm';
+    if (s < 86400) return Math.floor(s / 3600) + 'h';
+    if (s < 7 * 86400) return Math.floor(s / 86400) + 'd';
+    var d = new Date(t * 1000), o = { day: 'numeric', month: 'short' };
+    if (d.getFullYear() !== new Date().getFullYear()) o.year = 'numeric';
+    return d.toLocaleDateString('en-GB', o);
+  }
+
+  function face(u, cls) {
+    return u && u.avatar
+      ? '<img class="' + cls + '" src="' + esc(u.avatar) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+      : '<span class="' + cls + ' is-blank" aria-hidden="true">' +
+        esc(String((u && u.name) || '?').trim().slice(0, 1).toUpperCase()) + '</span>';
+  }
+
+  function commentHTML(c) {
+    var who = '<b>' + esc(c.user.name) + '</b>' +
+      (c.user.login ? '<a href="https://github.com/' + encodeURIComponent(c.user.login) + '" target="_blank" ' +
+        'rel="noopener nofollow">@' + esc(c.user.login) + '</a>' : '');
+    var when = new Date(c.created * 1000);
+    return '<article class="g-c" data-cid="' + c.id + '">' + face(c.user, 'g-c-ava') +
+      '<div class="g-c-body"><div class="g-c-head">' + who +
+        '<time datetime="' + when.toISOString() + '" title="' + esc(when.toLocaleString('en-GB')) + '">' +
+          esc(ago(c.created)) + '</time>' +
+        (c.canDelete ? '<button class="g-c-del" type="button" data-cdel="' + c.id + '">Delete</button>' : '') +
+      '</div><p class="g-c-text">' + esc(c.text) + '</p></div></article>';
+  }
+
+  var talk = null;   // {g, s, before, more}
+
+  function talkSheet(g) {
+    var s = sheet('<div class="g-sheet-top"><div><h3>Comments</h3>' +
+        '<p class="g-lede">' + esc(g.title) + ' &middot; <span id="c-total">' +
+          (g.comments ? compact(g.comments) : 'none yet') + '</span></p></div>' +
+        '<span class="g-sp"></span>' + X + '</div>' +
+      '<div class="g-cbox" id="c-box"><p class="g-hint busy">&nbsp;</p></div>' +
+      '<div class="g-clist" id="c-list" aria-live="polite"><p class="g-hint busy">Loading&hellip;</p></div>' +
+      '<div id="c-foot"></div>');
+    s.querySelector('.g-sheet').classList.add('is-talk');
+    talk = { g: g, s: s, before: 0, more: false };
+    // Убираем ?c=1, чтобы перезагрузка не открывала панель снова.
+    try {
+      var u = new URL(location.href);
+      if (u.searchParams.get('c')) { u.searchParams.delete('c'); history.replaceState(history.state, '', u.pathname + u.search + u.hash); }
+    } catch (e) {}
+    Promise.all([loadCfg(), loadMe()]).then(function () { if (talk && talk.s === s) drawBox(); });
+    loadPage(true);
+  }
+
+  function setTotal(n) {
+    if (!talk) return;
+    talk.g.comments = n;
+    drawTalk(talk.g);
+    var t = talk.s.querySelector('#c-total');
+    if (t) t.textContent = n ? compact(n) + (n === 1 ? ' comment' : ' comments') : 'none yet';
+  }
+
+  function loadPage(first) {
+    var t = talk;
+    if (!t) return;
+    var list = t.s.querySelector('#c-list');
+    var moreBtn = list.querySelector('[data-cmore]');
+    if (moreBtn) { moreBtn.disabled = true; moreBtn.textContent = 'Loading…'; }
+    api('/comments?game=' + encodeURIComponent(t.g.id) + (t.before ? '&before=' + t.before : ''))
+      .then(function (d) {
+        if (talk !== t) return;
+        if (!d.ok) throw new Error('load');
+        if (first) list.innerHTML = '';
+        if (moreBtn) moreBtn.remove();
+        setTotal(d.total);
+        if (first && !d.comments.length) {
+          list.innerHTML = '<p class="g-c-none">No comments yet. Be the first.</p>';
+          return;
+        }
+        list.insertAdjacentHTML('beforeend', d.comments.map(commentHTML).join(''));
+        if (d.comments.length) t.before = d.comments[d.comments.length - 1].id;
+        if (d.more) list.insertAdjacentHTML('beforeend',
+          '<button class="g-link g-cmore" type="button" data-cmore>Show older</button>');
+      })
+      .catch(function () {
+        if (talk !== t) return;
+        if (moreBtn) { moreBtn.disabled = false; moreBtn.textContent = 'Show older'; return; }
+        list.innerHTML = '<p class="g-hint bad">Comments would not load. ' +
+          '<button class="g-link" type="button" data-cretry>Try again</button></p>';
+      });
+  }
+
+  function draftKey(g) { return 'plair-draft-' + g.id; }
+
+  function drawBox() {
+    var t = talk, box = t.s.querySelector('#c-box'), foot = t.s.querySelector('#c-foot');
+    var max = (talkCfg && talkCfg.max) || 500;
+    if (!meUser) {
+      var ps = (talkCfg && talkCfg.providers) || [];
+      foot.innerHTML = '';
+      box.innerHTML = ps.length
+        ? '<p class="g-c-ask">Sign in to join the conversation.</p><div class="g-auth">' +
+          (ps.indexOf('google') !== -1 ? '<button class="g-auth-btn" type="button" data-signin="google">' +
+            ICON_GOOGLE + 'Continue with Google</button>' : '') +
+          (ps.indexOf('github') !== -1 ? '<button class="g-auth-btn" type="button" data-signin="github">' +
+            ICON_GITHUB + 'Continue with GitHub</button>' : '') +
+          '</div><p class="g-hint">We only keep your name and picture to show next to what you write. ' +
+          'No email, no password.</p>'
+        : '<p class="g-hint">Commenting opens soon.</p>';
+      return;
+    }
+    var draft = '';
+    try { draft = sessionStorage.getItem(draftKey(t.g)) || ''; } catch (e) {}
+    box.innerHTML = '<form class="g-cform" id="c-form">' + face(meUser, 'g-c-ava') +
+      '<div class="g-cform-main"><textarea id="c-text" rows="1" maxlength="' + max + '" ' +
+        'placeholder="Add a comment&hellip;" aria-label="Your comment">' + esc(draft) + '</textarea>' +
+      '<div class="g-cform-row"><span class="g-hint" id="c-msg"></span><span class="g-sp"></span>' +
+        '<span class="g-c-count" id="c-count"></span>' +
+        '<button class="g-c-post" type="submit" id="c-post" disabled>Post</button></div></div></form>';
+    foot.innerHTML = '<p class="g-c-me">Signed in as <b>' + esc(meUser.name) + '</b> &middot; ' +
+      '<button class="g-link" type="button" data-signout>Sign out</button> &middot; ' +
+      '<button class="g-link is-quiet" type="button" data-forget>Delete my comments and account</button></p>';
+    var ta = box.querySelector('#c-text');
+    ta.addEventListener('input', function () { fitBox(ta, max); });
+    ta.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); sendComment(); }
+    });
+    box.querySelector('#c-form').addEventListener('submit', function (e) { e.preventDefault(); sendComment(); });
+    fitBox(ta, max);
+  }
+
+  function fitBox(ta, max) {
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 160) + 'px';
+    var len = Array.from(ta.value).length, left = max - len;
+    var c = $('c-count');
+    if (c) { c.textContent = left <= 80 ? String(left) : ''; c.classList.toggle('bad', left < 0); }
+    var b = $('c-post');
+    if (b) b.disabled = !ta.value.trim() || left < 0;
+    try {
+      if (ta.value) sessionStorage.setItem(draftKey(talk.g), ta.value);
+      else sessionStorage.removeItem(draftKey(talk.g));
+    } catch (e) {}
+  }
+
+  var WHY = {
+    slow: function (d) { return 'One moment — you can post again in ' + (d.wait || 15) + ' s.'; },
+    day: function () { return 'That is the daily limit. See you tomorrow.'; },
+    banned: function () { return 'This account can no longer comment.'; },
+    long: function (d) { return 'Keep it under ' + (d.max || 500) + ' characters.'; },
+    empty: function () { return 'Write something first.'; }
+  };
+
+  function sendComment() {
+    var t = talk, ta = $('c-text'), msg = $('c-msg'), b = $('c-post');
+    if (!t || !ta || b.disabled) return;
+    var text = ta.value.trim();
+    if (!text) return;
+    b.disabled = true; msg.className = 'g-hint busy'; msg.textContent = 'Posting…';
+    api('/comments', { method: 'POST', body: { game: t.g.id, text: text } }).then(function (d) {
+      if (talk !== t) return;
+      if (d.ok) {
+        ta.value = ''; fitBox(ta, (talkCfg && talkCfg.max) || 500);
+        msg.className = 'g-hint'; msg.textContent = '';
+        var list = t.s.querySelector('#c-list'), none = list.querySelector('.g-c-none');
+        if (none) none.remove();
+        list.insertAdjacentHTML('afterbegin', commentHTML(d.comment));
+        setTotal(d.total);
+        return;
+      }
+      if (d.status === 401) { meUser = null; drawBox(); toast('Please sign in again'); return; }
+      msg.className = 'g-hint bad';
+      msg.textContent = WHY[d.why] ? WHY[d.why](d) : 'That did not post. Try again.';
+      b.disabled = false;
+    }).catch(function () {
+      if (talk !== t) return;
+      msg.className = 'g-hint bad'; msg.textContent = 'No connection. Try again.'; b.disabled = false;
+    });
+  }
+
+  /* Удаление и «забыть меня» — в два касания: первое спрашивает,
+     второе делает. Системных окон не открываем. */
+  function twoStep(btn, label, act) {
+    if (btn.dataset.armed) { act(); return; }
+    var was = btn.textContent;
+    btn.dataset.armed = '1'; btn.textContent = label; btn.classList.add('is-armed');
+    setTimeout(function () {
+      if (!btn.isConnected) return;
+      delete btn.dataset.armed; btn.textContent = was; btn.classList.remove('is-armed');
+    }, 3500);
+  }
+
+  document.addEventListener('click', function (e) {
+    var t = e.target, el;
+    if (!t.closest) return;
+    if ((el = t.closest('[data-talk]'))) { closeShares(); talkSheet(games[Number(el.dataset.talk)]); return; }
+    if (!talk || !open || open !== talk.s) return;
+    if ((el = t.closest('[data-signin]'))) {
+      var back = location.origin + location.pathname + '?g=' + encodeURIComponent(talk.g.id) + '&c=1';
+      location.assign(COUNTS + '/auth/' + el.dataset.signin + '?back=' + encodeURIComponent(back));
+      return;
+    }
+    if ((el = t.closest('[data-cmore]'))) { loadPage(false); return; }
+    if ((el = t.closest('[data-cretry]'))) { talk.before = 0; loadPage(true); return; }
+    if ((el = t.closest('[data-signout]'))) { dropSession(); drawBox(); reloadList(); toast('Signed out'); return; }
+    if ((el = t.closest('[data-forget]'))) {
+      twoStep(el, 'Delete everything? Tap again', function () {
+        el.disabled = true;
+        api('/me', { method: 'DELETE' }).then(function (d) {
+          if (!d.ok) throw new Error('forget');
+          dropSession(); drawBox(); reloadList(); toast('Your comments and account are gone');
+          loadCounts();
+        }).catch(function () { el.disabled = false; toast('That did not work. Try again.'); });
+      });
+      return;
+    }
+    if ((el = t.closest('[data-cdel]'))) {
+      twoStep(el, 'Sure?', function () {
+        el.disabled = true;
+        var row = el.closest('.g-c');
+        api('/comments/' + el.dataset.cdel, { method: 'DELETE' }).then(function (d) {
+          if (!d.ok) throw new Error('del');
+          row.remove();
+          if (typeof d.total === 'number') setTotal(d.total);
+          var list = talk && talk.s.querySelector('#c-list');
+          if (list && !list.querySelector('.g-c')) list.innerHTML = '<p class="g-c-none">No comments yet. Be the first.</p>';
+        }).catch(function () { el.disabled = false; toast('Could not delete. Try again.'); });
+      });
+    }
+  });
+
+  /* Аватар не загрузился (сменился, закрыт) — ставим первую букву имени. */
+  document.addEventListener('error', function (e) {
+    var im = e.target;
+    if (!im || im.tagName !== 'IMG' || !im.classList.contains('g-c-ava')) return;
+    var name = im.closest('.g-c') ? im.closest('.g-c').querySelector('.g-c-head b') : null;
+    var span = document.createElement('span');
+    span.className = 'g-c-ava is-blank';
+    span.setAttribute('aria-hidden', 'true');
+    span.textContent = String(name ? name.textContent : (meUser && meUser.name) || '?').trim().slice(0, 1).toUpperCase();
+    im.replaceWith(span);
+  }, true);
+
+  function reloadList() { if (talk) { talk.before = 0; loadPage(true); } }
+
   /* ── запуск игры ─────────────────────────────────────── */
 
   var player = null, wake = null;
@@ -1232,6 +1576,12 @@
         return s.dataset.id === want;
       })[0];
       if (hit) { $('feed').scrollTop = hit.offsetTop; $('feed').classList.add('is-moved'); warm(); }
+      /* Вернулись со входа (или пришли по ссылке из уведомления):
+         сразу открываем комментарии этой игры. */
+      var back = want && new URLSearchParams(location.search).get('c') === '1' &&
+        games.filter(function (g) { return g.id === want; })[0];
+      if (back && COUNTS) talkSheet(back);
+      if (authNote) authToast();
       /* Счётчики приезжают следом и ничего не ломают, если не приехали:
          лента к этому моменту уже стоит на экране. */
       loadCounts().then(function (got) {
