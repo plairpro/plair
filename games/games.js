@@ -372,9 +372,10 @@
         '<li>It <b>runs in a browser</b>. No downloads, no installers, no store links.</li>' +
         '<li>It lives in a <b>public repository you own</b> on GitHub, with Pages turned on ' +
           '(Settings &rarr; Pages &rarr; pick a branch).</li>' +
-        '<li>There is a <b>cover image</b> in that repository: upright, at least 720px across, ' +
-          '9:16 fits the screen exactly. Shoot it <b>inside</b> the game, not on the title ' +
-          'screen &mdash; a start button under our Play button reads as a mess.</li>' +
+        '<li>A <b>cover image</b>. Name it <code>cover.png</code> (or .jpg/.webp) and put it next to ' +
+          'your game&rsquo;s <code>index.html</code> &mdash; the form finds it by itself. No such file? ' +
+          'It takes the picture your page shares on social media (<code>og:image</code>). Best: upright, ' +
+          'at least 720px across, 9:16, shot <b>inside</b> the game, not on the title screen.</li>' +
       '</ul>' +
 
       '<h4>Then</h4>' +
@@ -647,8 +648,8 @@
       '<label class="g-field"><span>Cover image URL</span>' +
         '<input id="f-cover" type="url" autocapitalize="none" spellcheck="false" ' +
         'placeholder="https://…/cover.webp"></label>' +
-      '<p class="g-hint" id="f-cover-msg">Upright, 9:16, at least 720px across. Keep it in your ' +
-        'own repository so nothing of yours lives on our side.</p>' +
+      '<p class="g-hint" id="f-cover-msg">Put <code>cover.png</code> (or .jpg/.webp) next to your game&rsquo;s ' +
+        '<code>index.html</code> and it is picked up by itself. Upright, 9:16, at least 720px across.</p>' +
       '<div class="g-field"><span>Genres &mdash; up to 5</span><div class="g-pick" id="f-tags">' +
         TAGS.map(function (t) {
           return '<button class="g-chip" type="button" data-pick="' + esc(t) + '" aria-pressed="false">' +
@@ -725,6 +726,7 @@
           ' <button type="button" id="f-try" class="g-link">Try it in the player</button>';
         var blurb = $('f-blurb');
         if (blurb && !blurb.value && found.blurb) blurb.value = found.blurb.slice(0, 100);
+        autoCover(found.url);
         return found;
       });
     }).catch(function (err) {
@@ -759,17 +761,60 @@
           msg.className = 'g-hint good';
           msg.innerHTML = 'Plays at <code>' + esc(url) + '</code>.' +
             ' <button type="button" id="f-try" class="g-link">Try it in the player</button>';
+          autoCover(found.url);
           return found;
         });
     });
+  }
+
+  /* Обложку ищем сами, по порядку:
+     1) cover.webp / .png / .jpg рядом с index.html игры;
+     2) картинка для соцсетей, которую игра сама объявила (og:image);
+     ничего нет — в ленте будет заглушка с первой буквой названия.
+     Нашлась — подставляем в поле и проверяем, как будто её вставили руками. */
+  function pageImage(base) {
+    // GitHub Pages отвечают любому сайту, так что страницу игры можно прочитать.
+    return fetch(base, { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : ''; })
+      .then(function (html) {
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        var m = doc.querySelector('meta[property="og:image"], meta[name="og:image"], ' +
+          'meta[name="twitter:image"], meta[property="twitter:image"]');
+        var v = m && m.getAttribute('content');
+        return v ? new URL(v, base).href : '';
+      }).catch(function () { return ''; });
+  }
+
+  function autoCover(base) {
+    var box = $('f-cover');
+    if (!box || box.value.trim()) return;
+    var names = ['cover.webp', 'cover.png', 'cover.jpg', 'cover.jpeg'];
+    (function next(i) {
+      if (!box.isConnected || box.value.trim()) return;
+      if (i >= names.length) {
+        pageImage(base).then(function (src) {
+          if (!src || !box.isConnected || box.value.trim()) return;
+          box.value = src;
+          checkCover();
+        });
+        return;
+      }
+      var img = new Image();
+      img.onload = function () {
+        if (!box.isConnected || box.value.trim()) return;
+        box.value = base + names[i];
+        checkCover();
+      };
+      img.onerror = function () { next(i + 1); };
+      img.src = base + names[i];
+    })(0);
   }
 
   function checkCover() {
     var msg = $('f-cover-msg'), v = $('f-cover').value.trim();
     if (!v) {
       msg.className = 'g-hint';
-      msg.textContent = 'Portrait, at least 720px across. A screenshot from inside the game, ' +
-        'not the title screen. Keep it in your own repository.';
+      msg.innerHTML = 'Put <code>cover.png</code> (or .jpg/.webp) next to your game&rsquo;s ' +
+        '<code>index.html</code> and it is picked up by itself. Upright, 9:16, at least 720px across.';
       return;
     }
     msg.className = 'g-hint busy';
@@ -777,9 +822,9 @@
     var img = new Image();
     img.onload = function () {
       if (img.naturalWidth > img.naturalHeight) {
-        msg.className = 'g-hint bad';
-        msg.textContent = 'That image is wider than it is tall. The feed is full-screen and ' +
-          'upright, so covers are portrait — 9:16 fits exactly.';
+        msg.className = 'g-hint';
+        msg.textContent = 'Works, ' + img.naturalWidth + '×' + img.naturalHeight + ' — the feed will show it ' +
+          'with blurred edges. An upright 9:16 picture fills the screen better.';
       } else if (img.naturalWidth < 720) {
         msg.className = 'g-hint bad';
         msg.textContent = 'Only ' + img.naturalWidth + 'px across. It will look soft — use 720 or more.';
