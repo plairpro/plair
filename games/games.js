@@ -135,34 +135,11 @@
 
   function byDate(a, b) { return String(b.added).localeCompare(String(a.added)); }
   function byScore(a, b) { return score(b) - score(a) || byDate(a, b); }
-  var me = null;          // {login, name, avatar} — со слов пользователя, проверено у GitHub
   var picked = [];
-
-  /* ── кто я ───────────────────────────────────────────── */
-
-  try { me = JSON.parse(localStorage.getItem('plair-games-me') || 'null'); } catch (e) { me = null; }
-
-  function saveMe() {
-    try {
-      if (me) localStorage.setItem('plair-games-me', JSON.stringify(me));
-      else localStorage.removeItem('plair-games-me');
-    } catch (e) { /* приватное окно — переживём */ }
-    drawWho();
-  }
 
   var ICON_USER = '<svg viewBox="0 0 24 24" aria-hidden="true">' +
     '<circle cx="12" cy="8.5" r="3.7"/><path d="M4.8 20c.6-3.8 3.6-6 7.2-6s6.6 2.2 7.2 6" ' +
     'stroke-linecap="round"/></svg>';
-
-  function drawWho() {
-    var b = $('who');
-    b.innerHTML = me
-      ? '<img src="' + esc(avatar(me.login)) + '" alt=""><b>@' + esc(me.login) + '</b>'
-      : ICON_USER + '<b>Who are you?</b>';
-    b.setAttribute('aria-label', me ? 'Signed in as @' + me.login : 'Set your GitHub name');
-  }
-
-  function avatar(login) { return 'https://github.com/' + encodeURIComponent(login) + '.png?size=64'; }
 
   /* ── запросы к GitHub ────────────────────────────────── */
 
@@ -256,7 +233,7 @@
             return '<span class="g-tag' + (n > 2 ? ' is-extra' : '') + '">' + esc(t) + '</span>';
           }).join('') + '</div>' +
           '<div class="g-meta">' +
-            '<a class="g-author" href="https://github.com/' + esc(g.by) + '" target="_blank" rel="noopener">@' +
+            '<a class="g-author" href="' + esc(g.byUrl || ('https://github.com/' + g.by)) + '" target="_blank" rel="noopener">@' +
               esc(g.by) + '</a>' +
             /* Лайк, комментарии и «поделиться» — строкой справа от автора. */
             '<span class="g-acts-row">' + likeHTML(i) + talkHTML(i) + shareHTML(i, 'rail') + '</span>' +
@@ -362,68 +339,41 @@
 
   function howSheet() {
     sheet('<div class="g-sheet-top"><div><h3>How to add a game</h3>' +
-      '<p class="g-lede">Four steps, and about ten minutes the first time. ' +
-        'This is a test build: the GitHub checks are real, signing in is not wired up yet.</p></div>' +
+      '<p class="g-lede">Paste a link. That is the whole job &mdash; we fill in the rest.</p></div>' +
       '<span class="g-sp"></span>' + X + '</div>' +
       '<div class="g-doc">' +
 
-      '<h4>What your game needs first</h4>' +
-      '<ul>' +
-        '<li>It <b>runs in a browser</b>. No downloads, no installers, no store links.</li>' +
-        '<li>It lives in a <b>public repository you own</b> on GitHub, with Pages turned on ' +
-          '(Settings &rarr; Pages &rarr; pick a branch).</li>' +
-        '<li>A <b>cover image</b>. Name it <code>cover.png</code> (or .jpg/.webp) and put it next to ' +
-          'your game&rsquo;s <code>index.html</code> &mdash; the form finds it by itself. No such file? ' +
-          'It takes the picture your page shares on social media (<code>og:image</code>). Best: upright, ' +
-          'at least 720px across, 9:16, shot <b>inside</b> the game, not on the title screen.</li>' +
-      '</ul>' +
-
-      '<h4>Then</h4>' +
+      '<h4>Three steps</h4>' +
       '<ol>' +
-        '<li>Tell the page your GitHub username.</li>' +
-        '<li>Press the green <b>+</b> at the top right and paste the address of your repository.</li>' +
-        '<li>Fill in the title, one line about it, and up to five genres.</li>' +
-        '<li>Copy what the form builds and paste it into the catalogue file on GitHub. ' +
-          'Your card shows up about a minute later.</li>' +
+        '<li>Press the green <b>+</b> at the top and paste the link to your game ' +
+          '(for example <code>name.github.io/my-game</code>).</li>' +
+        '<li>Check the title, the line about it and the cover the page found. Change anything you like.</li>' +
+        '<li>Press <b>Send for review</b>. We look at every game by hand, usually within a day, ' +
+          'and then it appears at the top of the feed.</li>' +
       '</ol>' +
 
-      '<h4>Who runs this</h4>' +
-      '<p>PLAIR Games is made by PLAIR, a studio that builds games for brands, events and ' +
-        'training. <a href="/studio/">See the studio</a>.</p>' +
+      '<h4>What makes a good entry</h4>' +
+      '<ul>' +
+        '<li>It <b>runs in a browser</b> &mdash; no downloads, installers or store links.</li>' +
+        '<li>A <b>cover</b>. Put <code>cover.png</code> (or .jpg/.webp) next to your game&rsquo;s ' +
+          '<code>index.html</code> and it is picked up by itself, or upload a picture in the form. ' +
+          'Best: upright 9:16, shot <b>inside</b> the game rather than on the title screen.</li>' +
+        '<li><b>Keep it light.</b> Somebody will open it on a phone, on mobile data.</li>' +
+        '<li><b>Landscape-only game?</b> Say so in the one-line description.</li>' +
+        '<li>Some games refuse to be embedded. Those open in a separate tab instead &mdash; that is fine.</li>' +
+      '</ul>' +
 
       '<h4>How the feed is ordered</h4>' +
       '<p><b>New</b> is the default: whatever was added last comes first. ' +
       '<b>Popular</b> scores each game as <code>plays + 5 &times; likes + 15 &times; comments</code> ' +
-      '&mdash; the ladder follows what each one costs a player: a launch is one tap, a like needs ' +
-      'signing in, a comment needs writing something. Age is deliberately not in the formula. ' +
-      'Equal scores fall back to the newer game, so the order never shuffles on its own.</p>' +
-      '<p class="g-hint">' + (COUNTS
-        ? 'Launches are counted at most ten times a day from one browser, so a game cannot be ' +
-          'pushed up by reloading. All that is stored is three numbers per game and a random ' +
-          'number your own browser gave itself &mdash; no name, no mail, no cookies.'
-        : 'The counters are not wired up yet, so Popular currently matches New.') + '</p>' +
+      '&mdash; the ladder follows what each one costs a player: a launch is one tap, a like is a decision, ' +
+      'a comment needs writing something. Age is deliberately not in the formula.</p>' +
+      '<p class="g-hint">Launches are counted at most ten times a day from one browser, so a game cannot be ' +
+        'pushed up by reloading.</p>' +
 
-      '<h4>What gets checked</h4>' +
-      '<p>The repository exists and is public. You own it. Pages is on. The cover really loads and ' +
-        'is upright. The play address is read from GitHub, not typed by you &mdash; ' +
-        'a custom domain is picked up from the repository&rsquo;s own <code>CNAME</code> file.</p>' +
-
-      '<h4>Worth knowing</h4>' +
-      '<ul>' +
-        '<li><b>Only your own repositories.</b> Someone else&rsquo;s is rejected, even if the game ' +
-          'is yours &mdash; put it under your own account first.</li>' +
-        '<li><b>Keep it light.</b> Somebody will open it on a phone, on mobile data.</li>' +
-        '<li><b>Landscape-only game?</b> Say so in the one-line description.</li>' +
-        '<li>Some games refuse to be embedded. Those open in a separate tab instead, and that is ' +
-          'fine &mdash; nothing to fix on your side.</li>' +
-        '<li>Submitting the same repository again <b>replaces</b> the old card rather than ' +
-          'adding a second one.</li>' +
-      '</ul>' +
-
-      '<p class="g-aside"><b>Why the last step is manual.</b> Writing to the catalogue needs a key, ' +
-        'and a key in a web page is a key everyone has. Until the real sign-in is built, the form ' +
-        'hands you the text and you commit it yourself &mdash; which is also why the page currently ' +
-        'takes your word for who you are.</p>' +
+      '<h4>Who runs this</h4>' +
+      '<p>PLAIR Games is made by PLAIR, a studio that builds games for brands, events and ' +
+        'training. <a href="/studio/">See the studio</a>.</p>' +
 
       '<p class="g-contact"><button type="button" class="g-link" data-contact>Contact us</button>' +
         '<a class="g-privacy" href="/privacy/">Privacy</a></p>' +
@@ -557,347 +507,377 @@
     if (ev.target.closest && ev.target.closest('[data-contact]')) openContact();
   });
 
-  /* ── имя пользователя ────────────────────────────────── */
+  /* ── добавить игру ───────────────────────────────────── */
+  /* Автору нужно одно: вставить ссылку на игру. Название, описание и
+     обложку страница подбирает сама, автор может поправить. Заявка уходит
+     на наш сервер, модератор одобряет её одним нажатием — и игра в ленте.
+     Ни GitHub-аккаунта, ни JSON, ни коммитов. */
 
-  var thenSubmit = false;
+  var sub = null;   // {url, cover, coverData}
 
-  function whoSheet(forSubmit) {
-    thenSubmit = !!forSubmit;
-    var s = sheet('<div class="g-sheet-top"><div>' +
-      (forSubmit
-        ? '<p class="g-step">Add a game &middot; step 1 of 2</p><h3>Who are you on GitHub?</h3>' +
-          '<p class="g-lede">Games are added from your own repositories, so first the page needs ' +
-          'your GitHub name. Next step is the game itself.</p>'
-        : '<h3>Who are you on GitHub?</h3>' +
-          '<p class="g-lede">So the page can check that a repository you submit is actually yours.</p>') +
-      '</div>' +
-      '<span class="g-sp"></span>' + X + '</div>' +
-      '<label class="g-field"><span>GitHub username</span>' +
-        '<input id="w-login" type="text" autocapitalize="none" autocorrect="off" spellcheck="false" ' +
-        'placeholder="plairpro" value="' + esc(me ? me.login : '') + '"></label>' +
-      '<p class="g-hint" id="w-msg">Sign-in is not built yet, so this is on your honour. It still ' +
-        'catches the honest mistake of pasting someone else&rsquo;s repository.</p>' +
-      btn('w-go', forSubmit ? 'Continue' : 'Save') +
-      (me ? '<p class="g-hint"><button class="g-src" type="button" id="w-clear" ' +
-        'style="border:0;background:none;cursor:pointer;font:inherit">Forget me on this device</button></p>' : ''));
-
-    s.querySelector('#w-login').addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') saveWho();
-    });
-  }
-
-  function saveWho() {
-    var login = $('w-login').value.trim().replace(/^@/, '');
-    var msg = $('w-msg');
-    if (!/^[A-Za-z0-9-]{1,39}$/.test(login)) {
-      msg.className = 'g-hint bad';
-      msg.textContent = 'A GitHub username is letters, digits and dashes.';
-      return;
-    }
-    msg.className = 'g-hint busy';
-    msg.textContent = 'Asking GitHub…';
-    gh('/users/' + login).then(function (u) {
-      if (u.missing) {
-        msg.className = 'g-hint bad';
-        msg.textContent = 'GitHub has no user @' + login + '.';
-        return;
-      }
-      me = { login: u.login, name: u.name || u.login };
-      saveMe();
-      if (thenSubmit) { thenSubmit = false; submitSheet(true); } else shut();
-    }).catch(function (err) {
-      if (err.limited) {
-        // GitHub занят — верим на слово: ник всё равно сверится с адресом игры.
-        me = { login: login, name: login };
-        saveMe();
-        if (thenSubmit) { thenSubmit = false; submitSheet(true); } else shut();
-        return;
-      }
-      msg.className = 'g-hint bad';
-      msg.textContent = err.message;
-    });
-  }
-
-  /* ── публикация ──────────────────────────────────────── */
-
-  var found = null;   // {owner, repo, url}
-
-  function submitSheet(stepTwo) {
-    /* Без ника форму не открыть: по нему проверяется, что репозиторий
-       твой. Тогда «+» открывает окно ника как первый шаг добавления —
-       со своим заголовком — и после сохранения сразу ведёт в форму.
-       Раньше окно просто закрывалось, и «+» выглядел копией кнопки
-       кабинета: два значка, одно и то же окно. */
-    if (!me) { whoSheet(true); return; }
-    picked = [];
-    found = null;
-    var s = sheet('<div class="g-sheet-top"><div>' +
-      (stepTwo === true ? '<p class="g-step">Add a game &middot; step 2 of 2</p>' : '') +
-      '<h3>Add a game</h3>' +
-      '<p class="g-lede">Paste a repository you own. The play address comes from GitHub, not from you.</p></div>' +
-      '<span class="g-sp"></span>' + X + '</div>' +
-      '<label class="g-field"><span>Repository</span>' +
-        '<input id="f-repo" type="text" autocapitalize="none" autocorrect="off" spellcheck="false" ' +
-        'placeholder="github.com/' + esc(me.login) + '/your-game"></label>' +
-      '<p class="g-hint" id="f-repo-msg">Signed in as @' + esc(me.login) +
-        '. A repository owned by anyone else is rejected.</p>' +
-      '<label class="g-field"><span>Title</span>' +
-        '<input id="f-title" type="text" maxlength="40" placeholder="Up to 40 characters"></label>' +
-      '<label class="g-field"><span>One line about it</span>' +
-        '<input id="f-blurb" type="text" maxlength="100" placeholder="What the player does"></label>' +
-      '<label class="g-field"><span>Cover image URL</span>' +
-        '<input id="f-cover" type="url" autocapitalize="none" spellcheck="false" ' +
-        'placeholder="https://…/cover.webp"></label>' +
-      '<p class="g-hint" id="f-cover-msg">Put <code>cover.png</code> (or .jpg/.webp) next to your game&rsquo;s ' +
-        '<code>index.html</code> and it is picked up by itself. Upright, 9:16, at least 720px across.</p>' +
-      '<div class="g-field"><span>Genres &mdash; up to 5</span><div class="g-pick" id="f-tags">' +
-        TAGS.map(function (t) {
-          return '<button class="g-chip" type="button" data-pick="' + esc(t) + '" aria-pressed="false">' +
-            esc(t) + '</button>';
-        }).join('') + '</div></div>' +
-      btn('f-go', 'Check and build the entry') +
-      '<p class="g-hint" id="f-msg"></p><div id="f-out"></div>');
-
-    var repo = s.querySelector('#f-repo');
-    var t;
-    repo.addEventListener('input', function () {
-      found = null;
-      clearTimeout(t);
-      t = setTimeout(checkRepo, 420);
-    });
-    s.querySelector('#f-cover').addEventListener('change', checkCover);
-  }
-
-  function parseRepo(raw) {
-    var m = String(raw || '').trim()
-      .replace(/^https?:\/\//, '').replace(/^www\./, '')
-      .match(/^github\.com\/([A-Za-z0-9-]+)\/([A-Za-z0-9._-]+?)(?:\.git)?\/?$/);
-    if (m) return { owner: m[1], repo: m[2] };
-    // Можно вставить и адрес самой игры: name.github.io/project.
-    m = String(raw || '').trim().replace(/^https?:\/\//, '')
-      .match(/^([A-Za-z0-9-]+)\.github\.io\/([A-Za-z0-9._-]+?)\/?(?:index\.html)?$/i);
-    return m ? { owner: m[1], repo: m[2] } : null;
-  }
-
-  function checkRepo() {
-    var msg = $('f-repo-msg');
-    if (!msg) return Promise.resolve(null);
-    var raw = $('f-repo').value.trim();
-    if (!raw) {
-      msg.className = 'g-hint';
-      msg.textContent = 'Signed in as @' + me.login + '. A repository owned by anyone else is rejected.';
-      return Promise.resolve(null);
-    }
-    var p = parseRepo(raw);
-    if (!p) {
-      msg.className = 'g-hint bad';
-      msg.textContent = 'Paste the repository (github.com/name/project) or the game address (name.github.io/project).';
-      return Promise.resolve(null);
-    }
-    msg.className = 'g-hint busy';
-    msg.textContent = 'Asking GitHub about ' + p.owner + '/' + p.repo + '…';
-
-    return gh('/repos/' + p.owner + '/' + p.repo).then(function (r) {
-      if (r.missing) {
-        msg.className = 'g-hint bad';
-        msg.textContent = 'No such repository, or it is private. A game has to be public to be played.';
-        return null;
-      }
-      if (String(r.owner.login).toLowerCase() !== me.login.toLowerCase()) {
-        msg.className = 'g-hint bad';
-        msg.textContent = '@' + r.owner.login + ' owns that repository, not you. Only your own games go here.';
-        return null;
-      }
-      if (!r.has_pages) {
-        msg.className = 'g-hint bad';
-        msg.textContent = 'GitHub Pages is off for this repository, so there is nothing to play. ' +
-          'Turn it on in Settings → Pages, then try again.';
-        return null;
-      }
-      return customDomain(r.owner.login, r.name).then(function (domain) {
-        var url = domain
-          ? 'https://' + domain + '/'
-          : 'https://' + r.owner.login.toLowerCase() + '.github.io/' + r.name + '/';
-        found = { owner: r.owner.login, repo: r.name, url: url,
-                  html: r.html_url, blurb: r.description || '' };
-        msg.className = 'g-hint good';
-        msg.innerHTML = 'Yours, and it plays at <code>' + esc(url) + '</code>' +
-          (domain ? ' (its own domain).' : '.') +
-          ' <button type="button" id="f-try" class="g-link">Try it in the player</button>';
-        var blurb = $('f-blurb');
-        if (blurb && !blurb.value && found.blurb) blurb.value = found.blurb.slice(0, 100);
-        autoCover(found.url);
-        return found;
-      });
-    }).catch(function (err) {
-      if (err.limited) return checkRepoOffline(p, msg);
-      msg.className = 'g-hint bad';
-      msg.textContent = err.message;
-      return null;
-    });
-  }
-
-  /* Запасная проверка, когда GitHub API исчерпал лимит: хозяина берём из
-     адреса репозитория, а саму игру спрашиваем у GitHub Pages напрямую —
-     у Pages своего лимита нет, и они отвечают любому сайту. */
-  function checkRepoOffline(p, msg) {
-    if (p.owner.toLowerCase() !== me.login.toLowerCase()) {
-      msg.className = 'g-hint bad';
-      msg.textContent = 'That repository belongs to @' + p.owner + ', not you. Only your own games go here.';
-      return Promise.resolve(null);
-    }
-    return customDomain(p.owner, p.repo).then(function (domain) {
-      var url = domain ? 'https://' + domain + '/'
-                       : 'https://' + p.owner.toLowerCase() + '.github.io/' + p.repo + '/';
-      return fetch(url, { cache: 'no-store' }).then(function (r) { return r.ok; }, function () { return null; })
-        .then(function (ok) {
-          if (ok === false) {
-            msg.className = 'g-hint bad';
-            msg.textContent = 'Nothing plays at ' + url + ' yet. Check that GitHub Pages is on for this repository.';
-            return null;
-          }
-          found = { owner: p.owner, repo: p.repo, url: url,
-                    html: 'https://github.com/' + p.owner + '/' + p.repo, blurb: '' };
-          msg.className = 'g-hint good';
-          msg.innerHTML = 'Plays at <code>' + esc(url) + '</code>.' +
-            ' <button type="button" id="f-try" class="g-link">Try it in the player</button>';
-          autoCover(found.url);
-          return found;
-        });
-    });
-  }
-
-  /* Обложку ищем сами, по порядку:
-     1) cover.webp / .png / .jpg рядом с index.html игры;
-     2) картинка для соцсетей, которую игра сама объявила (og:image);
-     ничего нет — в ленте будет заглушка с первой буквой названия.
-     Нашлась — подставляем в поле и проверяем, как будто её вставили руками. */
-  function pageImage(base) {
-    // GitHub Pages отвечают любому сайту, так что страницу игры можно прочитать.
-    return fetch(base, { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : ''; })
-      .then(function (html) {
-        var doc = new DOMParser().parseFromString(html, 'text/html');
-        var m = doc.querySelector('meta[property="og:image"], meta[name="og:image"], ' +
-          'meta[name="twitter:image"], meta[property="twitter:image"]');
-        var v = m && m.getAttribute('content');
-        return v ? new URL(v, base).href : '';
-      }).catch(function () { return ''; });
-  }
-
-  function autoCover(base) {
-    var box = $('f-cover');
-    if (!box || box.value.trim()) return;
-    var names = ['cover.webp', 'cover.png', 'cover.jpg', 'cover.jpeg'];
-    (function next(i) {
-      if (!box.isConnected || box.value.trim()) return;
-      if (i >= names.length) {
-        pageImage(base).then(function (src) {
-          if (!src || !box.isConnected || box.value.trim()) return;
-          box.value = src;
-          checkCover();
-        });
-        return;
-      }
-      var img = new Image();
-      img.onload = function () {
-        if (!box.isConnected || box.value.trim()) return;
-        box.value = base + names[i];
-        checkCover();
-      };
-      img.onerror = function () { next(i + 1); };
-      img.src = base + names[i];
-    })(0);
-  }
-
-  function checkCover() {
-    var msg = $('f-cover-msg'), v = $('f-cover').value.trim();
-    if (!v) {
-      msg.className = 'g-hint';
-      msg.innerHTML = 'Put <code>cover.png</code> (or .jpg/.webp) next to your game&rsquo;s ' +
-        '<code>index.html</code> and it is picked up by itself. Upright, 9:16, at least 720px across.';
-      return;
-    }
-    msg.className = 'g-hint busy';
-    msg.textContent = 'Loading the image…';
-    var img = new Image();
-    img.onload = function () {
-      if (img.naturalWidth > img.naturalHeight) {
-        msg.className = 'g-hint';
-        msg.textContent = 'Works, ' + img.naturalWidth + '×' + img.naturalHeight + ' — the feed will show it ' +
-          'with blurred edges. An upright 9:16 picture fills the screen better.';
-      } else if (img.naturalWidth < 720) {
-        msg.className = 'g-hint bad';
-        msg.textContent = 'Only ' + img.naturalWidth + 'px across. It will look soft — use 720 or more.';
-      } else {
-        msg.className = 'g-hint good';
-        msg.textContent = 'Loads fine, ' + img.naturalWidth + '×' + img.naturalHeight + '.';
-      }
-    };
-    img.onerror = function () {
-      msg.className = 'g-hint bad';
-      msg.textContent = 'That address does not give back an image.';
-    };
-    img.src = v;
-  }
-
-  function slug(s) {
-    return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40)
-      || 'game-' + Date.now();
-  }
-
-  function build() {
-    var out = $('f-msg');
-    Promise.resolve(found || checkRepo()).then(function (f) {
-      if (!f) { out.className = 'g-hint bad'; out.textContent = 'Sort the repository out first.'; return; }
-      var title = $('f-title').value.trim();
-      if (!title) { out.className = 'g-hint bad'; out.textContent = 'Give the game a title.'; return; }
-      if (!picked.length) { out.className = 'g-hint bad'; out.textContent = 'Pick at least one genre.'; return; }
-
-      var entry = {
-        id: slug(title),
-        title: title,
-        by: f.owner,
-        blurb: $('f-blurb').value.trim(),
-        tags: picked.slice(),
-        cover: $('f-cover').value.trim(),
-        url: f.url,
-        repo: f.html,
-        added: new Date().toISOString().slice(0, 10)
-      };
-      var next = games.filter(function (g) { return g.id !== entry.id; }).concat([entry]);
-      next.sort(function (a, b) { return String(b.added).localeCompare(String(a.added)); });
-
-      out.textContent = '';
-      $('f-out').innerHTML = '<div class="g-out"><h4>Paste this over games.json</h4>' +
-        '<p class="g-hint">This is the whole catalogue with your game in it. Copy it, open the file on ' +
-        'GitHub, select everything, paste, and commit. The card shows up about a minute later.</p>' +
-        '<pre class="g-code" id="f-json">' + esc(JSON.stringify(next, null, 2)) + '</pre>' +
-        '<div class="g-row">' + btn('f-copy', 'Copy') +
-        '<a class="button" href="' + EDIT_URL + '" target="_blank" rel="noopener">' +
-        '<span class="blob" aria-hidden="true"></span><span class="f1">Open the file</span>' +
-        '<span class="f2" aria-hidden="true">Open the file<svg viewBox="0 0 24 24">' +
-        '<path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a>' +
-        '</div><p class="g-hint" id="f-copy-msg"></p></div>';
-      $('f-out').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    });
-  }
-
-  function copyJSON() {
-    var text = $('f-json').textContent, msg = $('f-copy-msg');
-    var ok = function () { msg.className = 'g-hint good'; msg.textContent = 'Copied.'; };
-    var no = function () {
-      msg.className = 'g-hint';
-      msg.textContent = 'Could not reach the clipboard — select the text above and copy it by hand.';
-      var r = document.createRange();
-      r.selectNodeContents($('f-json'));
-      var sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
-    };
+  function normGameUrl(raw) {
+    var v = String(raw || '').trim();
+    if (!v) return '';
+    if (!/^https?:\/\//i.test(v)) v = 'https://' + v;
+    // github.com/name/project → name.github.io/project
+    var m = v.match(/^https?:\/\/(?:www\.)?github\.com\/([A-Za-z0-9-]+)\/([A-Za-z0-9._-]+?)(?:\.git)?\/?$/i);
+    if (m) v = 'https://' + m[1].toLowerCase() + '.github.io/' + m[2] + '/';
     try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(ok, no);
-      } else no();
-    } catch (e) { no(); }
+      var u = new URL(v.replace(/^http:/i, 'https:'));
+      u.hash = '';
+      if (!/\.[a-z]{2,}$/i.test(u.hostname)) return '';
+      if (!/\/$/.test(u.pathname) && !/\.[a-z0-9]{2,5}$/i.test(u.pathname)) u.pathname += '/';
+      return u.toString();
+    } catch (e) { return ''; }
   }
+
+  function readPage(url) {
+    // GitHub Pages и многие хостинги отдают страницу любому сайту.
+    return fetch(url, { cache: 'no-store' }).then(function (r) {
+      if (!r.ok) return { status: r.status };
+      return r.text().then(function (html) {
+        var d = new DOMParser().parseFromString(html, 'text/html');
+        var meta = function (sel) { var el = d.querySelector(sel); return el ? (el.getAttribute('content') || '').trim() : ''; };
+        var img = meta('meta[property="og:image"],meta[name="og:image"],meta[name="twitter:image"],meta[property="twitter:image"]');
+        return {
+          status: 200,
+          title: meta('meta[property="og:title"]') || (d.title || '').trim(),
+          blurb: meta('meta[property="og:description"]') || meta('meta[name="description"]'),
+          image: img ? new URL(img, url).href : ''
+        };
+      });
+    }).catch(function () { return { status: 0 }; });
+  }
+
+  function loadsImage(src) {
+    return new Promise(function (ok) {
+      var im = new Image();
+      im.onload = function () { ok({ w: im.naturalWidth, h: im.naturalHeight }); };
+      im.onerror = function () { ok(null); };
+      im.src = src;
+    });
+  }
+
+  function niceTitle(t) {
+    t = String(t || '').replace(/\s+/g, ' ').trim();
+    if (!t) return '';
+    if (t === t.toLowerCase()) t = t.replace(/(^|[\s-])(\S)/g, function (m, a, b) { return a + b.toUpperCase(); });
+    return t.slice(0, 40);
+  }
+
+  function submitSheet() {
+    picked = [];
+    sub = { url: '', cover: '', coverData: '' };
+    var s = sheet('<div class="g-sheet-top"><div><h3>Add a game</h3>' +
+        '<p class="g-lede">Paste a link to your game. We fill in the rest &mdash; check it and send. ' +
+        'It goes live after a quick look from us.</p></div>' +
+        '<span class="g-sp"></span>' + X + '</div>' +
+      '<label class="g-field"><span>Link to the game</span>' +
+        '<input id="s-url" type="url" inputmode="url" autocapitalize="none" autocorrect="off" spellcheck="false" ' +
+        'placeholder="https://name.github.io/your-game/"></label>' +
+      '<p class="g-hint" id="s-url-msg">Any web game that opens in a browser. A GitHub repository link works too.</p>' +
+      '<div class="g-sub-more" id="s-more" hidden>' +
+        '<div class="g-cov">' +
+          '<div class="g-cov-img" id="s-cov" aria-hidden="true"></div>' +
+          '<div class="g-cov-side">' +
+            '<label class="g-field"><span>Title</span>' +
+              '<input id="s-title" type="text" maxlength="40" placeholder="Up to 40 characters"></label>' +
+            '<label class="g-field"><span>One line about it</span>' +
+              '<input id="s-blurb" type="text" maxlength="120" placeholder="What the player does"></label>' +
+          '</div>' +
+        '</div>' +
+        '<p class="g-hint" id="s-cov-msg"></p>' +
+        '<p class="g-hint"><label class="g-link g-file">Use my own picture' +
+          '<input type="file" id="s-file" accept="image/*" hidden></label></p>' +
+        '<div class="g-field"><span>Genres &mdash; up to 5, optional</span><div class="g-pick" id="f-tags">' +
+          TAGS.map(function (t) {
+            return '<button class="g-chip" type="button" data-pick="' + esc(t) + '" aria-pressed="false">' +
+              esc(t) + '</button>';
+          }).join('') + '</div></div>' +
+        '<label class="g-field"><span>How to reach you &mdash; optional</span>' +
+          '<input id="s-contact" type="text" maxlength="100" autocapitalize="none" ' +
+          'placeholder="Email or Telegram, if we have a question"></label>' +
+        btn('s-go', 'Send for review') +
+        '<p class="g-hint" id="f-msg"></p>' +
+      '</div>');
+
+    var input = s.querySelector('#s-url'), t;
+    input.addEventListener('input', function () { clearTimeout(t); t = setTimeout(inspectGame, 450); });
+    input.addEventListener('paste', function () { clearTimeout(t); t = setTimeout(inspectGame, 60); });
+    s.querySelector('#s-file').addEventListener('change', function () {
+      if (this.files && this.files[0]) ownCover(this.files[0]);
+    });
+  }
+
+  function setCover(src, note, cls) {
+    var box = $('s-cov'), msg = $('s-cov-msg');
+    if (!box) return;
+    box.style.backgroundImage = src ? 'url("' + src.replace(/"/g, '%22') + '")' : '';
+    box.classList.toggle('is-empty', !src);
+    if (!src) box.textContent = ($('s-title') && $('s-title').value.trim().slice(0, 1).toUpperCase()) || '?';
+    else box.textContent = '';
+    msg.className = 'g-hint' + (cls ? ' ' + cls : '');
+    msg.innerHTML = note || '';
+  }
+
+  var inspecting = '';
+  function inspectGame() {
+    var raw = $('s-url') && $('s-url').value, msg = $('s-url-msg');
+    if (!msg) return;
+    var url = normGameUrl(raw);
+    if (!raw || !raw.trim()) { $('s-more').hidden = true; msg.className = 'g-hint'; return; }
+    if (!url) {
+      msg.className = 'g-hint bad';
+      msg.textContent = 'That does not look like a web address yet.';
+      return;
+    }
+    if (url === inspecting) return;
+    inspecting = url;
+    sub.url = url;
+    msg.className = 'g-hint busy';
+    msg.textContent = 'Looking at the game…';
+    readPage(url).then(function (pg) {
+      if (inspecting !== url || !$('s-more')) return;
+      $('s-more').hidden = false;
+      var title = $('s-title'), blurb = $('s-blurb');
+      if (pg.status === 404) {
+        msg.className = 'g-hint bad';
+        msg.textContent = 'Nothing opens at ' + url + '. Check the link — for GitHub, Pages has to be on.';
+      } else if (pg.status === 200) {
+        msg.className = 'g-hint good';
+        msg.innerHTML = 'Found it. <button type="button" class="g-link" id="s-try">Try it in the player</button>';
+      } else {
+        msg.className = 'g-hint';
+        msg.innerHTML = 'This site does not let us peek inside, so fill in the title yourself. ' +
+          '<button type="button" class="g-link" id="s-try">Try it in the player</button>';
+      }
+      if (!title.value.trim()) {
+        var fallback = (new URL(url).pathname.split('/').filter(Boolean).pop() || '').replace(/[-_]+/g, ' ');
+        title.value = niceTitle(pg.title || fallback);
+      }
+      if (!blurb.value.trim() && pg.blurb) blurb.value = pg.blurb.replace(/\s+/g, ' ').slice(0, 120);
+      if (sub.coverData) return;
+      setCover('', 'Looking for a cover…', 'busy');
+      // Обложка: cover.* рядом с игрой → картинка для соцсетей → нет.
+      var tries = ['cover.webp', 'cover.png', 'cover.jpg', 'cover.jpeg'].map(function (n) { return new URL(n, url).href; });
+      if (pg.image) tries.push(pg.image);
+      (function next(i) {
+        if (inspecting !== url || sub.coverData) return;
+        if (i >= tries.length) {
+          sub.cover = '';
+          setCover('', 'No cover found. Add a screenshot from inside the game &mdash; ' +
+            'or skip it, the card will show the first letter of the title.');
+          return;
+        }
+        loadsImage(tries[i]).then(function (sz) {
+          if (!sz) return next(i + 1);
+          sub.cover = tries[i];
+          setCover(tries[i], 'Cover found by itself.' + (sz.w > sz.h
+            ? ' It is wide, so the feed shows it with soft edges &mdash; an upright 9:16 shot looks best.' : ''), 'good');
+        });
+      })(0);
+    });
+  }
+
+  /* Своя картинка: ужимаем прямо в браузере до 720×1280 (9:16, по
+     центру), чтобы на сервер уходило ~100 КБ, а не фото на 8 МБ. */
+  function ownCover(file) {
+    var url = URL.createObjectURL(file);
+    var im = new Image();
+    im.onload = function () {
+      var W = 720, H = 1280, c = document.createElement('canvas');
+      c.width = W; c.height = H;
+      var k = Math.max(W / im.naturalWidth, H / im.naturalHeight);
+      var w = im.naturalWidth * k, h = im.naturalHeight * k;
+      var g = c.getContext('2d');
+      g.fillStyle = '#111410'; g.fillRect(0, 0, W, H);
+      g.drawImage(im, (W - w) / 2, (H - h) / 2, w, h);
+      URL.revokeObjectURL(url);
+      var data = '', q = 0.82;
+      for (; q >= 0.4; q -= 0.12) {
+        data = c.toDataURL('image/webp', q);
+        if (data.indexOf('data:image/webp') !== 0) data = c.toDataURL('image/jpeg', q);
+        if (data.length < 440000) break;
+      }
+      sub.coverData = data;
+      sub.cover = '';
+      setCover(data, 'Your picture, trimmed to the screen.', 'good');
+    };
+    im.onerror = function () { URL.revokeObjectURL(url); setCover('', 'That file is not a picture we can read.', 'bad'); };
+    im.src = url;
+  }
+
+  function sendGame() {
+    var msg = $('f-msg'), go = $('s-go');
+    var url = normGameUrl($('s-url').value), title = $('s-title').value.trim();
+    if (!url) { msg.className = 'g-hint bad'; msg.textContent = 'Paste the link to the game first.'; return; }
+    if (!title) { msg.className = 'g-hint bad'; msg.textContent = 'Give the game a title.'; $('s-title').focus(); return; }
+    if (!COUNTS) { msg.className = 'g-hint bad'; msg.textContent = 'Sending is not set up yet.'; return; }
+    go.disabled = true;
+    msg.className = 'g-hint busy'; msg.textContent = 'Sending…';
+    api('/submit', { method: 'POST', body: {
+      url: url, title: title, blurb: $('s-blurb').value.trim(), tags: picked.slice(),
+      cover: sub.coverData ? '' : sub.cover, coverData: sub.coverData || '',
+      contact: $('s-contact').value.trim()
+    } }).then(function (d) {
+      if (!d.ok) {
+        go.disabled = false;
+        msg.className = 'g-hint bad';
+        msg.textContent = d.why === 'day' ? 'That is a lot of games for one day — try again tomorrow.'
+          : d.why === 'busy' ? 'The review queue is full right now. Try again later.'
+          : 'That did not go through. Check the link and the title.';
+        return;
+      }
+      var top = open && open.querySelector('.g-sheet');
+      if (!top) return;
+      top.innerHTML = '<div class="g-sheet-top"><div><h3>' + (d.duplicate ? 'Already with us' : 'Sent!') + '</h3>' +
+        '<p class="g-lede">' + (d.duplicate
+          ? (d.status === 'approved' ? 'This game is already in the feed.' : 'This game is already waiting for review.')
+          : 'Thanks. We look at every game by hand, usually within a day. Once it is approved it appears at the top of the feed.') +
+        '</p></div><span class="g-sp"></span>' + X + '</div>' +
+        btn('s-again', 'Add another game');
+    }).catch(function () {
+      go.disabled = false;
+      msg.className = 'g-hint bad'; msg.textContent = 'No connection. Try again.';
+    });
+  }
+
+  /* ── аккаунт ─────────────────────────────────────────── */
+  /* Кнопка с человечком в шапке: войти через Google (для комментариев),
+     выйти, а модератору — очередь присланных игр. */
+
+  var pending = 0;
+
+  function accountSheet() {
+    var s = sheet('<div class="g-sheet-top"><div><h3>' + (meUser ? esc(meUser.name) : 'Your account') + '</h3>' +
+        '<p class="g-lede">' + (meUser ? 'Signed in with Google.' :
+          'Sign in to comment. Playing, liking and adding games need no account.') + '</p></div>' +
+        '<span class="g-sp"></span>' + X + '</div>' +
+      '<div id="a-body"><p class="g-hint busy">&nbsp;</p></div>');
+    s.querySelector('.g-sheet').classList.add('is-account');
+    drawAccount();
+  }
+
+  function drawAccount() {
+    var body = $('a-body');
+    if (!body) return;
+    if (!meUser) {
+      loadCfg().then(function (cfg) {
+        if (!$('a-body')) return;
+        $('a-body').innerHTML = cfg.providers && cfg.providers.indexOf('google') !== -1
+          ? '<div class="g-auth"><div class="g-gbtn" id="a-google"></div></div>' +
+            '<p class="g-hint">We keep only your name and picture. <a href="/privacy/" target="_blank" rel="noopener">Privacy</a></p>'
+          : '<p class="g-hint">Signing in opens soon.</p>';
+        var gb = $('a-google');
+        if (gb) googleButton(gb);
+      });
+      return;
+    }
+    body.innerHTML =
+      (meUser.admin ? btn('a-review', 'Review new games' + (pending ? ' (' + pending + ')' : '')) : '') +
+      '<p class="g-c-me">' +
+        '<button class="g-link" type="button" data-signout>Sign out</button> &middot; ' +
+        '<button class="g-link is-quiet" type="button" data-forget>Delete my comments and account</button></p>';
+  }
+
+  function drawWho() {
+    var b = $('who');
+    if (!b) return;
+    b.innerHTML = meUser ? face(meUser, 'g-who-img') : ICON_USER;
+    b.classList.toggle('has-dot', !!(meUser && meUser.admin && pending));
+    b.setAttribute('aria-label', meUser ? 'Signed in as ' + meUser.name : 'Sign in');
+  }
+
+  function loadPending() {
+    if (!meUser || !meUser.admin) { pending = 0; drawWho(); return Promise.resolve(); }
+    return api('/submissions').then(function (d) {
+      pending = d.ok ? d.total : 0;
+      drawWho();
+      return d;
+    }).catch(function () {});
+  }
+
+  /* ── модерация ───────────────────────────────────────── */
+
+  var review = [];
+
+  function reviewSheet() {
+    var s = sheet('<div class="g-sheet-top"><div><h3>New games</h3>' +
+        '<p class="g-lede" id="r-lede">Loading…</p></div><span class="g-sp"></span>' + X + '</div>' +
+      '<div id="r-list"></div>');
+    s.querySelector('.g-sheet').classList.add('is-review');
+    loadPending().then(function (d) {
+      if (!$('r-list')) return;
+      if (!d || !d.ok) { $('r-lede').textContent = 'Only a moderator can see this.'; return; }
+      review = d.items;
+      drawReview(d.total);
+    });
+  }
+
+  function drawReview(total) {
+    $('r-lede').textContent = total ? total + ' waiting. Try each one, then publish or skip.' : 'Nothing waiting. All clear.';
+    $('r-list').innerHTML = review.map(function (it, i) {
+      return '<article class="g-rv" data-rv="' + it.id + '">' +
+        '<div class="g-rv-img' + (it.cover ? '' : ' is-empty') + '"' +
+          (it.cover ? ' style="background-image:url(&quot;' + esc(it.cover) + '&quot;)"' : '') + '>' +
+          (it.cover ? '' : esc(it.title.slice(0, 1).toUpperCase())) + '</div>' +
+        '<div class="g-rv-body"><h4>' + esc(it.title) + '</h4>' +
+          (it.blurb ? '<p>' + esc(it.blurb) + '</p>' : '') +
+          '<p class="g-rv-meta"><a href="' + esc(it.url) + '" target="_blank" rel="noopener">' + esc(it.url.replace(/^https:\/\//, '')) + '</a>' +
+            (it.contact ? ' &middot; ' + esc(it.contact) : '') +
+            (it.tags.length ? ' &middot; ' + esc(it.tags.join(', ')) : '') + '</p>' +
+          '<div class="g-rv-acts">' +
+            '<button class="g-link" type="button" data-rv-try="' + i + '">Try</button>' +
+            '<button class="g-c-post" type="button" data-rv-ok="' + it.id + '">Publish</button>' +
+            '<button class="g-link is-quiet" type="button" data-rv-no="' + it.id + '">Skip</button>' +
+          '</div></div></article>';
+    }).join('');
+  }
+
+  function decideGame(id, action, el) {
+    el.disabled = true;
+    api('/submissions/' + id, { method: 'POST', body: { action: action } }).then(function (d) {
+      if (!d.ok) throw new Error('decide');
+      review = review.filter(function (it) { return String(it.id) !== String(id); });
+      pending = Math.max(0, pending - 1);
+      drawWho();
+      if ($('r-list')) drawReview(pending);
+      if (action === 'approve') { toast('Published'); reloadGames(); } else toast('Skipped');
+    }).catch(function () { el.disabled = false; toast('That did not work. Try again.'); });
+  }
+
+  document.addEventListener('click', function (e) {
+    var t = e.target, el;
+    if (!t.closest) return;
+    if ((el = t.closest('#s-go'))) { sendGame(); return; }
+    if ((el = t.closest('#s-again'))) { submitSheet(); return; }
+    if ((el = t.closest('#s-try'))) {
+      var u = normGameUrl($('s-url') && $('s-url').value);
+      if (u) play({ id: 'try', title: ($('s-title') && $('s-title').value.trim()) || 'Preview', url: u },
+                  { noHash: true, preview: true });
+      return;
+    }
+    if ((el = t.closest('#a-review'))) { reviewSheet(); return; }
+    if ((el = t.closest('[data-rv-try]'))) {
+      var it = review[Number(el.dataset.rvTry)];
+      if (it) play({ id: 'try', title: it.title, url: it.url }, { noHash: true, preview: true });
+      return;
+    }
+    if ((el = t.closest('[data-rv-ok]'))) { decideGame(el.dataset.rvOk, 'approve', el); return; }
+    if ((el = t.closest('[data-rv-no]'))) { decideGame(el.dataset.rvNo, 'reject', el); return; }
+    if (open && open.querySelector('.is-account')) {
+      if (t.closest('[data-signout]')) { dropSession(); drawWho(); drawAccount(); toast('Signed out'); return; }
+      if ((el = t.closest('[data-forget]'))) {
+        twoStep(el, 'Delete everything? Tap again', function () {
+          el.disabled = true;
+          api('/me', { method: 'DELETE' }).then(function (d) {
+            if (!d.ok) throw new Error('forget');
+            dropSession(); drawWho(); drawAccount(); toast('Your comments and account are gone'); loadCounts();
+          }).catch(function () { el.disabled = false; toast('That did not work. Try again.'); });
+        });
+      }
+    }
+  });
 
   /* ── поделиться ──────────────────────────────────────── */
   /* Значки соцсетей — из Simple Icons (CC0), как есть, без перерисовки. */
@@ -1070,7 +1050,7 @@
   })();
 
   function dropSession() {
-    session = null; meUser = null;
+    session = null; meUser = null; pending = 0;
     try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
   }
 
@@ -1399,7 +1379,10 @@
       session = d.session;
       try { localStorage.setItem(SESSION_KEY, session); } catch (e) { /* приватное окно */ }
       meUser = d.user;
+      drawWho();
       if (talk && open === talk.s) { drawBox(); reloadList(); }
+      if (open && open.querySelector('.is-account')) accountSheet();
+      loadPending();
       toast('Signed in as ' + d.user.name);
     }).catch(function () { toast('Sign-in did not go through. Try again.'); });
   }
@@ -1494,7 +1477,15 @@
   /* Аватар не загрузился (сменился, закрыт) — ставим первую букву имени. */
   document.addEventListener('error', function (e) {
     var im = e.target;
-    if (!im || im.tagName !== 'IMG' || !im.classList.contains('g-c-ava')) return;
+    if (!im || im.tagName !== 'IMG') return;
+    if (im.classList.contains('g-who-img')) {
+      var sp = document.createElement('span');
+      sp.className = 'g-who-img';
+      sp.textContent = String((meUser && meUser.name) || '?').trim().slice(0, 1).toUpperCase();
+      im.replaceWith(sp);
+      return;
+    }
+    if (!im.classList.contains('g-c-ava')) return;
     var name = im.closest('.g-c') ? im.closest('.g-c').querySelector('.g-c-head b') : null;
     var span = document.createElement('span');
     span.className = 'g-c-ava is-blank';
@@ -1630,7 +1621,7 @@
   document.addEventListener('click', function (e) {
     var el = e.target.closest && e.target.closest(
       '[data-qclear],[data-tag],[data-order],[data-play],[data-pick],[data-close],[data-quit],[data-full],[data-more],' +
-      '#how,#who,#submit-open,#empty-go,#empty-how,#w-go,#w-clear,#f-go,#f-copy,#f-try');
+      '#how,#who,#submit-open,#empty-go,#empty-how');
     if (!el) return;
 
     if (el.dataset.tag) { filter = el.dataset.tag; renderFilters(); renderFeed(); return; }
@@ -1666,18 +1657,8 @@
     }
 
     if (el.id === 'how' || el.id === 'empty-how') { howSheet(); return; }
-    if (el.id === 'who') { whoSheet(); return; }
+    if (el.id === 'who') { accountSheet(); return; }
     if (el.id === 'submit-open' || el.id === 'empty-go') { submitSheet(); return; }
-    if (el.id === 'w-go') { saveWho(); return; }
-    if (el.id === 'w-clear') { me = null; saveMe(); shut(); return; }
-    if (el.id === 'f-go') { build(); return; }
-    if (el.id === 'f-try') {
-      // Проверка перед подачей: откроется ли игра прямо в странице.
-      if (found) play({ id: 'try', title: $('f-title').value.trim() || found.repo, url: found.url },
-                      { noHash: true, preview: true });
-      return;
-    }
-    if (el.id === 'f-copy') { copyJSON(); return; }
   });
 
   document.addEventListener('keydown', function (e) {
@@ -1784,12 +1765,50 @@
 
   /* ── старт ───────────────────────────────────────────── */
 
+  /* Лента = наш каталог games.json + игры, присланные авторами и
+     одобренные модератором (их отдаёт Worker). Если Worker молчит,
+     лента всё равно показывает каталог. */
+  function fetchGames() {
+    var base = fetch(CATALOG + '?t=' + Date.now()).then(function (r) { return r.ok ? r.json() : []; });
+    var extra = COUNTS
+      ? fetch(COUNTS + '/games').then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (d) { return d && d.ok ? d.games : []; }).catch(function () { return []; })
+      : Promise.resolve([]);
+    return Promise.all([base, extra]).then(function (both) {
+      var list = Array.isArray(both[0]) ? both[0] : [];
+      var ids = {};
+      list.forEach(function (g) { ids[g.id] = 1; });
+      both[1].forEach(function (g) { if (g && g.id && !ids[g.id]) { ids[g.id] = 1; list.push(g); } });
+      list.sort(byDate);
+      return list;
+    });
+  }
+
+  function reloadGames() {
+    fetchGames().then(function (list) {
+      list.forEach(function (g) {
+        var old = games.filter(function (o) { return o.id === g.id; })[0];
+        if (old) { g.plays = old.plays; g.likes = old.likes; g.comments = old.comments; }
+      });
+      games = list;
+      renderFilters();
+      renderFeed();
+    }).catch(function () {});
+  }
+
   drawWho();
-  fetch(CATALOG + '?t=' + Date.now())
-    .then(function (r) { return r.ok ? r.json() : []; })
+  loadMe().then(function () {
+    drawWho();
+    loadPending().then(function () {
+      // Ссылка из уведомления о новой игре: сразу открыть очередь.
+      if (new URLSearchParams(location.search).get('review') === '1') {
+        if (meUser && meUser.admin) reviewSheet(); else if (!meUser) accountSheet();
+      }
+    });
+  });
+  fetchGames()
     .then(function (list) {
-      games = Array.isArray(list) ? list : [];
-      games.sort(byDate);
+      games = list;
       renderFilters();
       renderFeed();
       /* Пришли по ссылке «поделиться»: ставим ленту на эту игру. */

@@ -75,7 +75,10 @@ async function catalog(env) {
   return Array.isArray(list) ? list : [];
 }
 async function known(env, id) {
-  return (await catalog(env)).some((g) => g && g.id === id);
+  if ((await catalog(env)).some((g) => g && g.id === id)) return true;
+  // …или игра, которую прислали через форму и одобрил модератор.
+  const row = await env.DB.prepare("SELECT 1 AS yes FROM submissions WHERE game = ? AND status = 'approved'").bind(id).first();
+  return !!row;
 }
 
 function today() { return new Date().toISOString().slice(0, 10); }
@@ -202,8 +205,25 @@ async function verifyGoogle(env, jwt) {
   if (c.aud !== googleId(env)) throw new Error('aud');
   if (c.iss !== 'accounts.google.com' && c.iss !== 'https://accounts.google.com') throw new Error('iss');
   if (typeof c.exp !== 'number' || c.exp < now() - 60 || !c.sub) throw new Error('exp');
+  // Почту не храним: она нужна только здесь, чтобы узнать модератора.
   return { id: 'google:' + c.sub, name: cleanName(c.name || c.given_name) || 'Player',
-           avatar: c.picture || null, login: null };
+           avatar: c.picture || null, login: null,
+           email: c.email_verified === false ? null : (c.email || null) };
+}
+
+async function sha256hex(text) {
+  const d = new Uint8Array(await crypto.subtle.digest('SHA-256', enc.encode(text)));
+  return Array.from(d, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/* Модератор — тот, чей адрес Google совпадает с отпечатком в
+   ADMIN_EMAIL_SHA256 (wrangler.toml). В репозитории лежит только
+   отпечаток, сам адрес нигде не записан. */
+async function isAdminEmail(env, email) {
+  if (!email) return false;
+  const want = String(env.ADMIN_EMAIL_SHA256 || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
+  if (!want.length) return false;
+  return want.indexOf(await sha256hex(String(email).trim().toLowerCase())) !== -1;
 }
 
 async function saveUser(env, p) {
@@ -220,8 +240,12 @@ async function googleSignIn(env, origin, body) {
   try { p = await verifyGoogle(env, body && body.credential); }
   catch (e) { return reply(env, origin, { ok: false, why: 'google' }, { status: 401 }); }
   const session = await saveUser(env, p);
-  const u = await env.DB.prepare('SELECT id, name, avatar, login FROM users WHERE id = ?').bind(p.id).first();
-  return reply(env, origin, { ok: true, session: session, user: Object.assign(publicUser(u), { id: u.id }) });
+  if (await isAdminEmail(env, p.email)) {
+    await env.DB.prepare('UPDATE users SET admin = 1 WHERE id = ?').bind(p.id).run();
+  }
+  const u = await env.DB.prepare('SELECT id, name, avatar, login, admin FROM users WHERE id = ?').bind(p.id).first();
+  return reply(env, origin, { ok: true, session: session,
+    user: Object.assign(publicUser(u), { id: u.id, admin: u.admin === 1 }) });
 }
 
 /* GitHub: обычный вход с переходом на github.com и обратно. Ему нужен
@@ -306,9 +330,9 @@ async function who(env, request) {
   if (!/^Bearer\s+/i.test(h)) return null;
   const s = await unseal(env, h.replace(/^Bearer\s+/i, '').trim(), 's');
   if (!s) return null;
-  const u = await env.DB.prepare('SELECT id, name, avatar, login, banned FROM users WHERE id = ?').bind(s.u).first();
+  const u = await env.DB.prepare('SELECT id, name, avatar, login, banned, admin FROM users WHERE id = ?').bind(s.u).first();
   if (!u) return null;
-  u.admin = String(env.ADMINS || '').split(',').map((x) => x.trim()).indexOf(u.id) !== -1;
+  u.admin = u.admin === 1 || String(env.ADMINS || '').split(',').map((x) => x.trim()).indexOf(u.id) !== -1;
   return u;
 }
 
@@ -494,14 +518,164 @@ const SCHEMA = [
     'user TEXT NOT NULL, text TEXT NOT NULL, created INTEGER NOT NULL)',
   'CREATE INDEX IF NOT EXISTS comments_game ON comments (game, id DESC)',
   'CREATE INDEX IF NOT EXISTS comments_user ON comments (user, created)',
-  'CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)'
+  'CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)',
+  // Игры, присланные через форму. Ждут модератора (pending), потом
+  // approved или rejected. game — id в ленте, выдаётся при одобрении.
+  'CREATE TABLE IF NOT EXISTS submissions (id INTEGER PRIMARY KEY AUTOINCREMENT, game TEXT, ' +
+    'url TEXT NOT NULL, title TEXT NOT NULL, blurb TEXT, tags TEXT, cover TEXT, cover_data TEXT, ' +
+    'by TEXT, by_url TEXT, contact TEXT, user TEXT, ip TEXT, ' +
+    "status TEXT NOT NULL DEFAULT 'pending', created INTEGER NOT NULL, decided INTEGER)",
+  'CREATE INDEX IF NOT EXISTS submissions_status ON submissions (status, created)',
+  'CREATE UNIQUE INDEX IF NOT EXISTS submissions_game ON submissions (game)'
 ];
 let installed = null;
 function install(env) {
   if (!installed) {
-    installed = env.DB.batch(SCHEMA.map((q) => env.DB.prepare(q))).catch((e) => { installed = null; throw e; });
+    installed = env.DB.batch(SCHEMA.map((q) => env.DB.prepare(q)))
+      // Столбец «модератор» появился позже таблицы — добавляем, если его нет.
+      .then(() => env.DB.prepare('ALTER TABLE users ADD COLUMN admin INTEGER NOT NULL DEFAULT 0').run().catch(() => {}))
+      .catch((e) => { installed = null; throw e; });
   }
   return installed;
+}
+
+/* ── игры от авторов ───────────────────────────────────── */
+
+const SUBMITS_A_DAY = 5;        // заявок с одного адреса в сутки
+const MAX_PENDING = 300;        // больше в очереди не держим
+const MAX_COVER = 460000;       // символов в обложке data:… (~340 КБ картинки)
+
+function cleanUrl(v) {
+  try {
+    const u = new URL(String(v || '').trim());
+    if (u.protocol !== 'https:' || String(v).length > 400) return null;
+    u.hash = '';
+    return u.toString();
+  } catch (e) { return null; }
+}
+
+function slugify(v) {
+  return String(v || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40).replace(/-+$/, '');
+}
+
+function author(url) {
+  const u = new URL(url);
+  const m = u.hostname.match(/^([a-z0-9-]+)\.github\.io$/i);
+  return m ? { by: m[1], byUrl: 'https://github.com/' + m[1] } : { by: u.hostname, byUrl: u.origin };
+}
+
+async function notifyText(env, text) {
+  if (!env.TG_BOT_TOKEN || !env.TG_CHAT_ID) return;
+  try {
+    await fetch('https://api.telegram.org/bot' + env.TG_BOT_TOKEN + '/sendMessage', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: env.TG_CHAT_ID, text: text, disable_web_page_preview: true })
+    });
+  } catch (e) { /* не страшно */ }
+}
+
+async function submitGame(env, origin, request, ctx, me, body) {
+  body = body || {};
+  const url = cleanUrl(body.url);
+  const title = cleanName(body.title).slice(0, 40);
+  if (!url) return reply(env, origin, { ok: false, why: 'url' }, { status: 400 });
+  if (!title) return reply(env, origin, { ok: false, why: 'title' }, { status: 400 });
+  const blurb = cleanText(body.blurb).replace(/\s+/g, ' ').slice(0, 120);
+  const tags = (Array.isArray(body.tags) ? body.tags : [])
+    .map(String).filter((t) => /^[A-Za-z]{2,20}$/.test(t)).slice(0, 5);
+  const cover = typeof body.cover === 'string' && /^https:\/\/\S{4,500}$/.test(body.cover) ? body.cover : null;
+  const coverData = typeof body.coverData === 'string' && body.coverData.length <= MAX_COVER &&
+    /^data:image\/(webp|jpeg|png);base64,[A-Za-z0-9+\/=]+$/.test(body.coverData) ? body.coverData : null;
+  const contact = cleanName(body.contact).slice(0, 100) || null;
+  const a = author(url);
+
+  // Адрес отправителя храним только отпечатком — для лимита заявок.
+  const ip = (await sha256hex((request.headers.get('CF-Connecting-IP') || '') + '|' + await secret(env))).slice(0, 24);
+  const t = now();
+  const day = await env.DB.prepare('SELECT COUNT(*) AS n FROM submissions WHERE ip = ? AND created > ?').bind(ip, t - 86400).first();
+  if (day && day.n >= SUBMITS_A_DAY) return reply(env, origin, { ok: false, why: 'day' }, { status: 429 });
+  const dup = await env.DB.prepare("SELECT status FROM submissions WHERE url = ? AND status IN ('pending','approved')").bind(url).first();
+  if (dup) return reply(env, origin, { ok: true, duplicate: true, status: dup.status });
+  const queue = await env.DB.prepare("SELECT COUNT(*) AS n FROM submissions WHERE status = 'pending'").first();
+  if (queue && queue.n >= MAX_PENDING) return reply(env, origin, { ok: false, why: 'busy' }, { status: 429 });
+
+  await env.DB.prepare(
+    'INSERT INTO submissions (url, title, blurb, tags, cover, cover_data, by, by_url, contact, user, ip, created) ' +
+    'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(url, title, blurb || null, JSON.stringify(tags), cover, coverData, a.by, a.byUrl, contact,
+         me ? me.id : null, ip, t).run();
+
+  ctx.waitUntil(notifyText(env, 'New game for review: ' + title + '\n' + url +
+    (contact ? '\nContact: ' + contact : '') + '\n\nReview: https://plair.pro/?review=1'));
+  return reply(env, origin, { ok: true });
+}
+
+function gameOut(origin, r) {
+  return {
+    id: r.game, title: r.title, blurb: r.blurb || '', tags: JSON.parse(r.tags || '[]'),
+    cover: r.has_data ? origin + '/cover/' + r.game : (r.cover || ''),
+    url: r.url, repo: r.by_url, by: r.by, byUrl: r.by_url,
+    added: new Date((r.decided || r.created) * 1000).toISOString().slice(0, 10)
+  };
+}
+
+async function approvedGames(env, origin, url) {
+  const { results } = await env.DB.prepare(
+    'SELECT game, title, blurb, tags, cover, (cover_data IS NOT NULL) AS has_data, url, by, by_url, created, decided ' +
+    "FROM submissions WHERE status = 'approved' ORDER BY decided DESC LIMIT 500"
+  ).all();
+  return reply(env, origin, { ok: true, games: (results || []).map((r) => gameOut(url.origin, r)) },
+    { headers: { 'Cache-Control': 'public, max-age=60' } });
+}
+
+async function coverImage(env, game) {
+  const r = await env.DB.prepare("SELECT cover_data FROM submissions WHERE game = ? AND status = 'approved'").bind(game).first();
+  const m = r && r.cover_data && r.cover_data.match(/^data:(image\/(?:webp|jpeg|png));base64,(.+)$/);
+  if (!m) return new Response('Not found', { status: 404 });
+  return new Response(unb64u(m[2].replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')), {
+    headers: { 'Content-Type': m[1], 'Cache-Control': 'public, max-age=86400', 'Access-Control-Allow-Origin': '*' }
+  });
+}
+
+async function listSubmissions(env, origin, me) {
+  if (!me || !me.admin) return reply(env, origin, { ok: false, why: 'admin' }, { status: 403 });
+  const { results } = await env.DB.prepare(
+    "SELECT id, url, title, blurb, tags, cover, cover_data, by, by_url, contact, created FROM submissions " +
+    "WHERE status = 'pending' ORDER BY created ASC LIMIT 20"
+  ).all();
+  const total = await env.DB.prepare("SELECT COUNT(*) AS n FROM submissions WHERE status = 'pending'").first();
+  return reply(env, origin, {
+    ok: true, total: (total && total.n) || 0,
+    items: (results || []).map((r) => ({
+      id: r.id, url: r.url, title: r.title, blurb: r.blurb || '', tags: JSON.parse(r.tags || '[]'),
+      cover: r.cover_data || r.cover || '', by: r.by, byUrl: r.by_url, contact: r.contact || '', created: r.created
+    }))
+  });
+}
+
+async function decide(env, origin, me, id, body) {
+  if (!me || !me.admin) return reply(env, origin, { ok: false, why: 'admin' }, { status: 403 });
+  const row = await env.DB.prepare('SELECT id, title, url, status FROM submissions WHERE id = ?').bind(id).first();
+  if (!row) return reply(env, origin, { ok: false, why: 'gone' }, { status: 404 });
+  const action = body && body.action;
+  if (action === 'reject' || action === 'unpublish') {
+    await env.DB.prepare("UPDATE submissions SET status = 'rejected', decided = ? WHERE id = ?").bind(now(), id).run();
+    return reply(env, origin, { ok: true, status: 'rejected' });
+  }
+  if (action !== 'approve') return reply(env, origin, { ok: false, why: 'action' }, { status: 400 });
+  if (row.status === 'approved') return reply(env, origin, { ok: true, status: 'approved' });
+  // id в ленте: из названия, а если оно не латиницей — из адреса игры.
+  const path = new URL(row.url).pathname.split('/').filter(Boolean).pop() || new URL(row.url).hostname.split('.')[0];
+  const base = slugify(row.title) || slugify(path) || 'game';
+  const taken = new Set((await catalog(env)).map((g) => g && g.id));
+  let game = base, n = 2;
+  while (taken.has(game) ||
+         await env.DB.prepare('SELECT 1 AS yes FROM submissions WHERE game = ?').bind(game).first()) {
+    game = (base.slice(0, 36) + '-' + n++);
+  }
+  await env.DB.prepare("UPDATE submissions SET status = 'approved', game = ?, decided = ? WHERE id = ?")
+    .bind(game, now(), id).run();
+  return reply(env, origin, { ok: true, status: 'approved', game: game });
 }
 
 /* ── маршруты ──────────────────────────────────────────── */
@@ -539,6 +713,22 @@ export default {
           google: googleId(env),
           max: MAX_LEN
         }, { headers: { 'Cache-Control': 'public, max-age=300' } });
+      }
+
+      if (path === '/submit' && m === 'POST') {
+        let body = null;
+        try { body = await request.json(); } catch (e) { body = null; }
+        return submitGame(env, origin, request, ctx, await who(env, request), body);
+      }
+      if (path === '/games' && m === 'GET') return approvedGames(env, origin, url);
+      const cov = path.match(/^\/cover\/([a-z0-9-]{1,40})$/);
+      if (cov && m === 'GET') return coverImage(env, cov[1]);
+      if (path === '/submissions' && m === 'GET') return listSubmissions(env, origin, await who(env, request));
+      const dec = path.match(/^\/submissions\/(\d{1,10})$/);
+      if (dec && m === 'POST') {
+        let body = null;
+        try { body = await request.json(); } catch (e) { body = null; }
+        return decide(env, origin, await who(env, request), Number(dec[1]), body);
       }
 
       if (m === 'GET' && path === '/counts') {

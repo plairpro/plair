@@ -448,4 +448,32 @@
 .g-like.is-pop svg{animation:g-pop .35s ease}
 @keyframes g-pop{0%{transform:scale(1)}40%{transform:scale(1.3)}100%{transform:scale(1)}}
 
+/* ── добавить игру, аккаунт, модерация ───────────────────── */
+.g-sub-more[hidden]{display:none}
+.g-cov{display:flex;gap:14px;align-items:flex-start;margin-top:4px}
+.g-cov-img{flex:none;width:92px;aspect-ratio:9/16;margin-top:14px;border-radius:12px;
+  border:1px solid var(--line-2);background:var(--surface) center/cover no-repeat;
+  display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:34px;color:var(--line-2)}
+.g-cov-side{flex:1;min-width:0}
+.g-cov-side .g-field:first-child{margin-top:14px}
+.g-file{cursor:pointer;font-size:13px}
+.g-hint .g-link{font-size:inherit}
+.g-sheet.is-review{max-width:620px}
+.g-rv{display:flex;gap:14px;padding:14px 0;border-top:1px solid var(--line)}
+.g-rv-img{flex:none;width:72px;aspect-ratio:9/16;border-radius:10px;border:1px solid var(--line-2);
+  background:var(--surface) center/cover no-repeat;display:grid;place-items:center;
+  font-family:var(--display);font-weight:800;font-size:26px;color:var(--line-2)}
+.g-rv-body{flex:1;min-width:0}
+.g-rv-body h4{font-family:var(--display);font-weight:600;font-size:17px;letter-spacing:-.02em;margin:0 0 4px}
+.g-rv-body p{margin:0 0 4px;color:var(--muted);font-size:13.5px;line-height:1.45}
+.g-rv-meta{font-size:12.5px!important;color:var(--dim)!important;overflow-wrap:anywhere}
+.g-rv-meta a{color:var(--accent)}
+.g-rv-acts{display:flex;align-items:center;gap:16px;margin-top:10px}
+.g-who .g-who-img{width:28px;height:28px;border-radius:50%;object-fit:cover}
+.g-who span.g-who-img{display:grid;place-items:center;background:var(--surface);color:var(--ink);font-size:13px;font-weight:700}
+.g-who{position:relative}
+.g-who.has-dot::after{content:"";position:absolute;top:1px;right:1px;width:10px;height:10px;border-radius:50%;
+  background:var(--accent);box-shadow:0 0 0 2px var(--bg)}
+.g-sheet.is-account .button{margin-top:6px}
+
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
