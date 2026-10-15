@@ -122,7 +122,7 @@
           var c = d.counts[g.id];
           if (!c) return;
           g.plays = c.plays; g.likes = c.likes; g.comments = c.comments;
-          drawTalk(g);
+          drawTalk(g); drawLike(g);
         });
         return true;
       })
@@ -243,8 +243,9 @@
           '<div class="g-meta">' +
             '<a class="g-author" href="https://github.com/' + esc(g.by) + '" target="_blank" rel="noopener">@' +
               esc(g.by) + '</a>' +
+            /* Лайк, комментарии и «поделиться» — строкой справа от автора. */
+            '<span class="g-acts-row">' + likeHTML(i) + talkHTML(i) + shareHTML(i, 'rail') + '</span>' +
           '</div></div>' +
-        talkHTML(i) + shareHTML(i, 'rail') +
       '</div></section>';
   }
 
@@ -1030,9 +1031,74 @@
   function talkHTML(i) {
     if (!COUNTS) return '';
     var g = games[i], n = Number(g.comments) || 0;
-    return '<button class="g-talk" type="button" data-talk="' + i + '" ' +
-      'aria-label="Comments on ' + esc(g.title) + '"><span class="g-talk-ico">' + ICON_TALK + '</span>' +
-      '<span class="g-talk-n" data-talk-n="' + esc(g.id) + '">' + (n ? compact(n) : '') + '</span></button>';
+    return '<button class="g-act g-talk" type="button" data-talk="' + i + '" ' +
+      'aria-label="Comments on ' + esc(g.title) + '">' + ICON_TALK +
+      '<span class="g-act-n" data-talk-n="' + esc(g.id) + '">' + (n ? compact(n) : '') + '</span></button>';
+  }
+
+  /* ── лайки ───────────────────────────────────────────── */
+  /* Без входа: один лайк с браузера на игру, по тому же случайному
+     номеру браузера, что и запуски. Какие игры этот браузер лайкнул,
+     помним у себя и сверяем с сервером при открытии ленты. */
+  var liked = {};
+  try { liked = JSON.parse(localStorage.getItem('plair-liked') || '{}') || {}; } catch (e) { liked = {}; }
+  function saveLiked() { try { localStorage.setItem('plair-liked', JSON.stringify(liked)); } catch (e) {} }
+
+  var ICON_HEART = '<svg class="g-line" viewBox="0 0 24 24" aria-hidden="true">' +
+    '<path d="M12 20.3s-7.8-4.6-7.8-10.4A4.4 4.4 0 0 1 12 7.3a4.4 4.4 0 0 1 7.8 2.6c0 5.8-7.8 10.4-7.8 10.4z"/></svg>';
+
+  function likeHTML(i) {
+    if (!COUNTS) return '';
+    var g = games[i], n = Number(g.likes) || 0, on = !!liked[g.id];
+    return '<button class="g-act g-like' + (on ? ' is-on' : '') + '" type="button" data-like="' + i + '" ' +
+      'aria-pressed="' + on + '" aria-label="Like ' + esc(g.title) + '">' + ICON_HEART +
+      '<span class="g-act-n" data-like-n="' + esc(g.id) + '">' + (n ? compact(n) : '') + '</span></button>';
+  }
+
+  function drawLike(g) {
+    var on = !!liked[g.id];
+    [].forEach.call(document.querySelectorAll('[data-like-n]'), function (el) {
+      if (el.getAttribute('data-like-n') !== g.id) return;
+      el.textContent = g.likes ? compact(g.likes) : '';
+      var b = el.closest('.g-like');
+      b.classList.toggle('is-on', on);
+      b.setAttribute('aria-pressed', String(on));
+    });
+  }
+
+  function loadLiked() {
+    if (!COUNTS) return;
+    fetch(COUNTS + '/mine?visitor=' + visitor()).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d || !d.ok) return;
+      liked = {};
+      d.liked.forEach(function (id) { liked[id] = 1; });
+      saveLiked();
+      games.forEach(drawLike);
+    }).catch(function () {});
+  }
+
+  function toggleLike(g, btn) {
+    var on = !liked[g.id];
+    if (on) liked[g.id] = 1; else delete liked[g.id];
+    g.likes = Math.max(0, (Number(g.likes) || 0) + (on ? 1 : -1));
+    saveLiked();
+    drawLike(g);
+    if (on && btn) { btn.classList.remove('is-pop'); void btn.offsetWidth; btn.classList.add('is-pop'); }
+    fetch(COUNTS + '/like', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: g.id, visitor: visitor(), on: on })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d || !d.ok) throw new Error('like');
+      g.likes = d.likes;
+      drawLike(g);
+    }).catch(function () {
+      // Не дошло — возвращаем как было.
+      if (on) delete liked[g.id]; else liked[g.id] = 1;
+      g.likes = Math.max(0, (Number(g.likes) || 0) + (on ? -1 : 1));
+      saveLiked();
+      drawLike(g);
+      toast('No connection — the like did not count');
+    });
   }
 
   function drawTalk(g) {
@@ -1288,6 +1354,7 @@
     var t = e.target, el;
     if (!t.closest) return;
     if ((el = t.closest('[data-talk]'))) { closeShares(); talkSheet(games[Number(el.dataset.talk)]); return; }
+    if ((el = t.closest('[data-like]'))) { closeShares(); toggleLike(games[Number(el.dataset.like)], el); return; }
     if (!talk || !open || open !== talk.s) return;
     if ((el = t.closest('[data-signin]'))) {
       var back = location.origin + location.pathname + '?g=' + encodeURIComponent(talk.g.id) + '&c=1';
@@ -1638,6 +1705,7 @@
       if (authNote) authToast();
       /* Счётчики приезжают следом и ничего не ломают, если не приехали:
          лента к этому моменту уже стоит на экране. */
+      loadLiked();
       loadCounts().then(function (got) {
         if (!got) return;
         if (order === 'hot') renderFeed();
