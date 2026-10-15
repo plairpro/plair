@@ -11,4 +11,7 @@ database_id = "8bbd0b76-6206-45af-8c5b-e2024766ee8c"
 # Куда слать уведомления о новых комментариях. Сам ключ бота — секрет,
 # его кладёт ./setup.sh (wrangler secret put TG_BOT_TOKEN), в файлах его нет.
 [vars]
+# Вход через Google. Client ID публичный (виден в коде любой страницы со
+# входом через Google), поэтому лежит здесь, а не в секретах.
+GOOGLE_WEB_CLIENT_ID = "750018174613-mq3urvdq26e6e098fs70t4vof956hj2t.apps.googleusercontent.com"
 TG_CHAT_ID = "876305"

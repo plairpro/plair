@@ -163,6 +163,17 @@ function cleanName(v) {
    подписанный Google’ом паспорт (ID-токен). Проверяем подпись по открытым
    ключам Google и что паспорт выписан именно нашему сайту. Секретный
    ключ Google для этого не нужен — только публичный Client ID. */
+/* Client ID — публичный, лежит в wrangler.toml (GOOGLE_WEB_CLIENT_ID).
+   Берём только то, что похоже на настоящий ID Google: случайно
+   вставленная в поле строка не должна сломать вход. */
+function googleId(env) {
+  const re = /^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/;
+  for (const v of [env.GOOGLE_WEB_CLIENT_ID, env.GOOGLE_CLIENT_ID]) {
+    if (v && re.test(String(v).trim())) return String(v).trim();
+  }
+  return null;
+}
+
 let gKeys = null, gKeysAt = 0;
 async function googleKeys(fresh) {
   // Свежие ключи — не чаще раза в пять минут, иначе чужие запросы с
@@ -188,7 +199,7 @@ async function verifyGoogle(env, jwt) {
   const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', pub, unb64u(parts[2]), enc.encode(parts[0] + '.' + parts[1]));
   if (!ok) throw new Error('signature');
   const c = JSON.parse(dec.decode(unb64u(parts[1])));
-  if (c.aud !== env.GOOGLE_CLIENT_ID) throw new Error('aud');
+  if (c.aud !== googleId(env)) throw new Error('aud');
   if (c.iss !== 'accounts.google.com' && c.iss !== 'https://accounts.google.com') throw new Error('iss');
   if (typeof c.exp !== 'number' || c.exp < now() - 60 || !c.sub) throw new Error('exp');
   return { id: 'google:' + c.sub, name: cleanName(c.name || c.given_name) || 'Player',
@@ -204,7 +215,7 @@ async function saveUser(env, p) {
 }
 
 async function googleSignIn(env, origin, body) {
-  if (!env.GOOGLE_CLIENT_ID) return reply(env, origin, { ok: false, why: 'off' }, { status: 404 });
+  if (!googleId(env)) return reply(env, origin, { ok: false, why: 'off' }, { status: 404 });
   let p;
   try { p = await verifyGoogle(env, body && body.credential); }
   catch (e) { return reply(env, origin, { ok: false, why: 'google' }, { status: 401 }); }
@@ -523,9 +534,9 @@ export default {
       if (m === 'GET' && path === '/config') {
         return reply(env, origin, {
           ok: true,
-          providers: (env.GOOGLE_CLIENT_ID ? ['google'] : [])
+          providers: (googleId(env) ? ['google'] : [])
             .concat(Object.keys(PROVIDERS).filter((p) => PROVIDERS[p].ready(env))),
-          google: env.GOOGLE_CLIENT_ID || null,
+          google: googleId(env),
           max: MAX_LEN
         }, { headers: { 'Cache-Control': 'public, max-age=300' } });
       }

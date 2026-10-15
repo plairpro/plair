@@ -368,6 +368,9 @@
 /* «Contact us» в самом низу справки. */
 .g-contact{margin:28px 0 4px;padding-top:18px;border-top:1px solid var(--line);text-align:center}
 .g-contact .g-link{font-size:15px;font-weight:600;color:var(--accent)}
+.g-privacy{display:block;margin-top:10px;font-size:12.5px;color:var(--dim);text-decoration:none}
+.g-privacy:hover{color:var(--accent)}
+.g-hint a{color:var(--muted)}
 
 /* ── комментарии ────────────────────────────────────────── */
 /* Кнопка — над «поделиться», число под ней. Пока сети раскрыты,

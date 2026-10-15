@@ -17,7 +17,7 @@
   /* Адрес счётчиков — Worker на Cloudflare, см. worker/README.md.
      Пока строка пуста, лента живёт как раньше: «Популярное» совпадает
      с «Новым», и подсказка «i» говорит об этом прямо. */
-  var COUNTS = '';
+  var COUNTS = 'https://plair-counts.timurshorts.workers.dev';
   var EDIT_URL = 'https://github.com/plairpro/plair/edit/main/games/games.json';
   var API = 'https://api.github.com';
 
@@ -408,7 +408,8 @@
         'hands you the text and you commit it yourself &mdash; which is also why the page currently ' +
         'takes your word for who you are.</p>' +
 
-      '<p class="g-contact"><button type="button" class="g-link" data-contact>Contact us</button></p>' +
+      '<p class="g-contact"><button type="button" class="g-link" data-contact>Contact us</button>' +
+        '<a class="g-privacy" href="/privacy/">Privacy</a></p>' +
 
       '</div>');
   }
@@ -1144,7 +1145,7 @@
           (ps.indexOf('github') !== -1 ? '<button class="g-auth-btn" type="button" data-signin="github">' +
             ICON_GITHUB + 'Continue with GitHub</button>' : '') +
           '</div><p class="g-hint">We only keep your name and picture to show next to what you write. ' +
-          'No email, no password.</p>'
+          'No email, no password. <a href="/privacy/" target="_blank" rel="noopener">Privacy</a></p>'
         : '<p class="g-hint">Commenting opens soon.</p>';
       var gb = box.querySelector('#c-google');
       if (gb) googleButton(gb);
