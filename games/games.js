@@ -111,7 +111,7 @@
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: g.id, visitor: visitor() }), keepalive: true
     }).then(function (r) { return r.json(); }).then(function (d) {
-      if (d && d.ok && d.counted) g.plays = d.plays;
+      if (d && d.ok && d.counted) { g.plays = d.plays; drawNums(g); }
     }).catch(function () {});
   }
 
@@ -187,7 +187,7 @@
           if (!c) return;
           g.plays = c.plays; g.likes = c.likes; g.comments = c.comments;
           g.shares = c.shares || 0; g.saves = c.saves || 0; g.seconds = c.seconds || 0;
-          drawTalk(g); drawLike(g);
+          drawNums(g); drawLike(g);
         });
         return true;
       })
@@ -327,8 +327,8 @@
           '<div class="g-meta">' +
             '<a class="g-author" href="' + esc(g.byUrl || ('https://github.com/' + g.by)) + '" target="_blank" rel="noopener">@' +
               esc(g.by) + '</a>' +
-            /* Лайк, комментарии и «поделиться» — строкой справа от автора. */
-            '<span class="g-acts-row">' + likeHTML(i) + talkHTML(i) + saveHTML(i) + shareHTML(i, 'rail') + '</span>' +
+            /* Запуски, лайк, комментарии, сохранить и «поделиться» — строкой справа от автора. */
+            '<span class="g-acts-row">' + playsHTML(i) + likeHTML(i) + talkHTML(i) + saveHTML(i) + shareHTML(i, 'rail') + '</span>' +
           '</div></div>' +
       '</div></section>';
   }
@@ -1269,14 +1269,33 @@
     return (n / 1000).toFixed(n < 10000 ? 1 : 0).replace(/\.0$/, '') + 'K';
   }
 
-  /* Кнопка сбоку карточки, над «поделиться». Число под ней — как в
-     привычных лентах; ноль не пишем. */
+  /* Число рядом со значком: запуски, лайки, комментарии, сохранения.
+     Пишем всегда, и ноль тоже, — чтобы было видно, что тут считают. */
+  function numHTML(g, k) {
+    return '<span class="g-act-n" data-n="' + k + '" data-id="' + esc(g.id) + '">' + compact(g[k]) + '</span>';
+  }
+  function drawNums(g) {
+    if (!g) return;
+    [].forEach.call(document.querySelectorAll('[data-n]'), function (el) {
+      if (el.getAttribute('data-id') === g.id) el.textContent = compact(g[el.getAttribute('data-n')]);
+    });
+  }
+
+  /* Сколько раз игру запускали. Тап по значку тоже запускает игру. */
+  var ICON_PLAYS = '<svg class="g-line" viewBox="0 0 24 24" aria-hidden="true">' +
+    '<path d="M8 5.6v12.8a.8.8 0 0 0 1.2.7l10-6.4a.8.8 0 0 0 0-1.4l-10-6.4A.8.8 0 0 0 8 5.6z"/></svg>';
+  function playsHTML(i) {
+    if (!COUNTS) return '';
+    var g = games[i];
+    return '<button class="g-act g-plays" type="button" data-play="' + i + '" ' +
+      'aria-label="Play ' + esc(g.title) + ', ' + compact(g.plays) + ' plays">' + ICON_PLAYS + numHTML(g, 'plays') + '</button>';
+  }
+
   function talkHTML(i) {
     if (!COUNTS) return '';
-    var g = games[i], n = Number(g.comments) || 0;
+    var g = games[i];
     return '<button class="g-act g-talk" type="button" data-talk="' + i + '" ' +
-      'aria-label="Comments on ' + esc(g.title) + '">' + ICON_TALK +
-      '<span class="g-act-n" data-talk-n="' + esc(g.id) + '">' + (n ? compact(n) : '') + '</span></button>';
+      'aria-label="Comments on ' + esc(g.title) + '">' + ICON_TALK + numHTML(g, 'comments') + '</button>';
   }
 
   /* ── лайки ───────────────────────────────────────────── */
@@ -1292,18 +1311,16 @@
 
   function likeHTML(i) {
     if (!COUNTS) return '';
-    var g = games[i], n = Number(g.likes) || 0, on = !!liked[g.id];
+    var g = games[i], on = !!liked[g.id];
     return '<button class="g-act g-like' + (on ? ' is-on' : '') + '" type="button" data-like="' + i + '" ' +
-      'aria-pressed="' + on + '" aria-label="Like ' + esc(g.title) + '">' + ICON_HEART +
-      '<span class="g-act-n" data-like-n="' + esc(g.id) + '">' + (n ? compact(n) : '') + '</span></button>';
+      'aria-pressed="' + on + '" aria-label="Like ' + esc(g.title) + '">' + ICON_HEART + numHTML(g, 'likes') + '</button>';
   }
 
   function drawLike(g) {
     var on = !!liked[g.id];
-    [].forEach.call(document.querySelectorAll('[data-like-n]'), function (el) {
-      if (el.getAttribute('data-like-n') !== g.id) return;
-      el.textContent = g.likes ? compact(g.likes) : '';
-      var b = el.closest('.g-like');
+    drawNums(g);
+    [].forEach.call(document.querySelectorAll('[data-like]'), function (b) {
+      if (games[Number(b.dataset.like)] !== g) return;
       b.classList.toggle('is-on', on);
       b.setAttribute('aria-pressed', String(on));
     });
@@ -1395,7 +1412,7 @@
     var g = games[i], on = savedList.indexOf(g.id) !== -1;
     return '<button class="g-act g-save' + (on ? ' is-on' : '') + '" type="button" data-save="' + i + '" ' +
       'aria-pressed="' + on + '" aria-label="' + (on ? 'Remove from saved' : 'Save') + ' ' + esc(g.title) + '">' +
-      ICON_SAVE + '</button>';
+      ICON_SAVE + numHTML(g, 'saves') + '</button>';
   }
 
   function drawSaves() {
@@ -1404,6 +1421,7 @@
       b.classList.toggle('is-on', on);
       b.setAttribute('aria-pressed', String(on));
     });
+    games.forEach(drawNums);
   }
 
   function loadSaves() {
@@ -1430,15 +1448,14 @@
       if (!on && order === 'saved') renderFeed();
     }).catch(function () {
       if (on) savedList = savedList.filter(function (x) { return x !== g.id; }); else savedList.unshift(g.id);
+      g.saves = Math.max(0, (Number(g.saves) || 0) + (on ? -1 : 1));
       drawSaves();
       toast('No connection — not saved');
     });
   }
 
   function drawTalk(g) {
-    [].forEach.call(document.querySelectorAll('[data-talk-n]'), function (el) {
-      if (el.getAttribute('data-talk-n') === g.id) el.textContent = g.comments ? compact(g.comments) : '';
-    });
+    drawNums(g);
   }
 
   function ago(t) {
@@ -2047,7 +2064,7 @@
     fetchGames().then(function (list) {
       list.forEach(function (g) {
         var old = games.filter(function (o) { return o.id === g.id; })[0];
-        if (old) { g.plays = old.plays; g.likes = old.likes; g.comments = old.comments; }
+        if (old) ['plays', 'likes', 'comments', 'saves', 'shares', 'seconds'].forEach(function (k) { g[k] = old[k]; });
       });
       games = list;
       renderFilters();
