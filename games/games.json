@@ -1,5 +1,19 @@
 [
   {
+    "id": "colorful-animals",
+    "title": "Colorful Animals",
+    "blurb": "Meditative coloring book for children",
+    "tags": [
+      "Casual",
+      "Puzzle"
+    ],
+    "cover": "/games/covers/colorful-animals.webp",
+    "url": "https://f42a.github.io/colorful-animals/",
+    "repo": "https://github.com/f42a/colorful-animals",
+    "by": "f42a",
+    "added": "2026-10-15"
+  },
+  {
     "id": "shift",
     "title": "Shift",
     "aka": "Сдвиг",
