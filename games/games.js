@@ -333,6 +333,40 @@
       '</div></section>';
   }
 
+  /* Задники карточек размываем один раз, а не на каждом кадре листания:
+     уменьшаем обложку до горстки точек и растягиваем обратно — при
+     растяжении браузер сам сглаживает её в мягкое пятно. Готовую
+     картинку помним, вторая карточка с той же обложкой берёт её. */
+  var softCache = {};
+  function softImage(src, w) {
+    if (!softCache[src]) softCache[src] = new Promise(function (ok, no) {
+      var im = new Image();
+      if (!/^\//.test(src)) im.crossOrigin = 'anonymous';
+      im.onload = function () {
+        try {
+          var h = Math.round(w * im.naturalHeight / Math.max(1, im.naturalWidth));
+          var a = document.createElement('canvas'); a.width = w; a.height = h;
+          var x = a.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(im, 0, 0, w, h);
+          var b = document.createElement('canvas'); b.width = w * 8; b.height = h * 8;
+          var y = b.getContext('2d'); y.imageSmoothingQuality = 'high'; y.drawImage(a, 0, 0, b.width, b.height);
+          ok(b.toDataURL('image/jpeg', 0.8));
+        } catch (e) { no(e); }   // чужая обложка без разрешения — оставляем живое размытие
+      };
+      im.onerror = no;
+      im.src = src;
+    });
+    return softCache[src];
+  }
+  function softBacks(slide) {
+    [].forEach.call(slide.querySelectorAll('img.g-back:not(.is-soft),img.g-fill:not(.is-soft)'), function (el) {
+      var src = el.getAttribute('src');
+      if (!src || el.dataset.soft) return;
+      el.dataset.soft = '1';
+      softImage(src + '#' + (el.classList.contains('g-back') ? 'b' : 'f'), el.classList.contains('g-back') ? 10 : 14)
+        .then(function (url) { el.src = url; el.classList.add('is-soft'); }, function () {});
+    });
+  }
+
   /* Сколько жанров влезает в одну строку под описанием. Меряем в
      свёрнутом виде; если всё влезло и описание короткое, разворачивать
      нечего — стрелка у описания пропадает. */
@@ -1968,6 +2002,7 @@
       [].forEach.call(all[i].querySelectorAll('img[loading="lazy"]'), function (im) {
         im.loading = 'eager';
       });
+      softBacks(all[i]);
     }
   }
 
