@@ -38,8 +38,12 @@
      id игры. Регистр, ё/е и
      диакритика не важны. Несколько слов ищутся все сразу, каждое — где
      угодно в карточке: «arcade drone» найдёт аркаду про дрон. */
-  var query = '';
-  try { query = new URLSearchParams(location.search).get('q') || ''; } catch (e) {}
+  /* Параметры входящей ссылки (?g, ?list, ?q, ?c, ?review, старый #play-)
+     читаем один раз при открытии и сразу убираем из адреса: обновление
+     страницы всегда ведёт на обычную ленту — все игры, «New». */
+  var START = new URLSearchParams(location.search);
+  var START_HASH = location.hash;
+  var query = START.get('q') || '';
 
   function fold(v) {
     return String(v == null ? '' : v).toLowerCase().replace(/ё/g, 'е')
@@ -70,10 +74,7 @@
      чтобы порядок был устойчивым, а не случайным. */
   var SORTS = { fresh: 'New', hot: 'Popular' };
   var order = 'fresh';
-  try {
-    var keptOrder = localStorage.getItem('plair-order');
-    if (SORTS[keptOrder] || keptOrder === 'saved') order = keptOrder;
-  } catch (e) {}
+  try { localStorage.removeItem('plair-order'); } catch (e) {}
 
   /* Случайный номер этого браузера. Нужен ровно для двух вещей: не дать
      накрутить запуски перезагрузкой и не дать лайкнуть дважды. Человека
@@ -898,7 +899,6 @@
     if ((el = t.closest('#a-review'))) { reviewSheet(); return; }
     if ((el = t.closest('#a-saved'))) {
       order = 'saved';
-      try { localStorage.setItem('plair-order', order); } catch (e) {}
       shut(); renderFilters(); renderFeed(); return;
     }
     if ((el = t.closest('[data-rv-try]'))) {
@@ -1781,7 +1781,6 @@
     if (el.dataset.order) {
       if (listView) { listView = null; try { var lu = new URL(location.href); lu.searchParams.delete('list'); history.replaceState(history.state, '', lu.pathname + lu.search + lu.hash); } catch (e2) {} }
       order = el.dataset.order;
-      try { localStorage.setItem('plair-order', order); } catch (e) {}
       renderFilters(); renderFeed(); return;
     }
     if (el.dataset.more !== undefined) {
@@ -1867,13 +1866,6 @@
     $('q-x').hidden = !v;
     // На телефоне поле свёрнуто — кнопка горит зелёным, пока поиск действует.
     $('q-open').classList.toggle('is-on', !!v.trim());
-    /* Запрос живёт в адресе: ссылку с ним можно переслать, и «назад»
-       после игры возвращает к той же выдаче. Историю не засоряем. */
-    try {
-      var u = new URL(location.href);
-      if (v.trim()) u.searchParams.set('q', v.trim()); else u.searchParams.delete('q');
-      history.replaceState(history.state, '', u.pathname + u.search + u.hash);
-    } catch (e) {}
     if (games.length) renderFeed();
   }
 
@@ -1949,13 +1941,40 @@
     }).catch(function () {});
   }
 
+  try { if (location.search || /^#play-/.test(location.hash)) history.replaceState(null, '', location.pathname); } catch (e) {}
+
+  /* Логотип — «домой» без перезагрузки: все игры, «New», без поиска,
+     без чужого списка, лента в начале. */
+  function goHome() {
+    if (player) quit();
+    shut();
+    closeShares();
+    listView = null;
+    order = 'fresh';
+    filter = 'All';
+    query = '';
+    $('q').value = '';
+    $('q-x').hidden = true;
+    $('q-open').classList.remove('is-on');
+    openSearch(false);
+    try { history.replaceState(null, '', '/'); } catch (e) {}
+    renderFilters();
+    renderFeed();
+    $('feed').scrollTop = 0;
+  }
+  document.querySelector('.g-brand').addEventListener('click', function (e) {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+    e.preventDefault();
+    goHome();
+  });
+
   drawWho();
   loadMe().then(function () {
     drawWho();
     loadSaves();
     loadPending().then(function () {
       // Ссылка из уведомления о новой игре: сразу открыть очередь.
-      if (new URLSearchParams(location.search).get('review') === '1') {
+      if (START.get('review') === '1') {
         if (meUser && meUser.admin) reviewSheet(); else if (!meUser) accountSheet();
       }
     });
@@ -1966,23 +1985,20 @@
       renderFilters();
       renderFeed();
       /* Пришли по ссылке «поделиться»: ставим ленту на эту игру. */
-      var want = new URLSearchParams(location.search).get('g');
-      var oldHash = location.hash.match(/^#play-([a-z0-9-]+)$/);
-      if (!want && oldHash) {
-        want = oldHash[1];
-        try { history.replaceState(null, '', location.pathname + '?g=' + want); } catch (e) {}
-      }
+      var want = START.get('g');
+      var oldHash = START_HASH.match(/^#play-([a-z0-9-]+)$/);
+      if (!want && oldHash) want = oldHash[1];
       var hit = want && [].filter.call(document.querySelectorAll('#feed .g-slide'), function (s) {
         return s.dataset.id === want;
       })[0];
       if (hit) { $('feed').scrollTop = hit.offsetTop; $('feed').classList.add('is-moved'); warm(); }
       /* Вернулись со входа (или пришли по ссылке из уведомления):
          сразу открываем комментарии этой игры. */
-      var back = want && new URLSearchParams(location.search).get('c') === '1' &&
+      var back = want && START.get('c') === '1' &&
         games.filter(function (g) { return g.id === want; })[0];
       if (back && COUNTS) talkSheet(back);
       if (authNote) authToast();
-      var listCode = new URLSearchParams(location.search).get('list');
+      var listCode = START.get('list');
       if (listCode) openList(listCode);
       /* Счётчики приезжают следом и ничего не ломают, если не приехали:
          лента к этому моменту уже стоит на экране. */
