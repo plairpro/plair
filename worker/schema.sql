@@ -51,3 +51,6 @@ CREATE INDEX IF NOT EXISTS comments_user ON comments (user, created);
 
 -- Служебное: ключ подписи пропусков, если он не задан секретом.
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+
+-- Избранное: какие игры человек сохранил себе.
+CREATE TABLE IF NOT EXISTS saves (user TEXT NOT NULL, game TEXT NOT NULL, created INTEGER NOT NULL, PRIMARY KEY (user, game));

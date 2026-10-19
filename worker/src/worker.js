@@ -449,9 +449,34 @@ async function forgetMe(env, origin, me) {
       '(SELECT COUNT(*) FROM comments WHERE comments.game = games.id AND comments.user = ?))'
     ).bind(me.id),
     env.DB.prepare('DELETE FROM comments WHERE user = ?').bind(me.id),
+    env.DB.prepare('DELETE FROM saves WHERE user = ?').bind(me.id),
     env.DB.prepare('DELETE FROM users WHERE id = ?').bind(me.id)
   ]);
   return reply(env, origin, { ok: true });
+}
+
+/* ── избранное ─────────────────────────────────────────── */
+/* «Сохранить игру» — только для вошедших: список живёт на сервере и
+   виден на любом устройстве, где человек вошёл тем же Google. */
+async function mySaves(env, origin, me) {
+  if (!me) return reply(env, origin, { ok: false, why: 'signin' }, { status: 401 });
+  const { results } = await env.DB.prepare('SELECT game FROM saves WHERE user = ? ORDER BY created DESC').bind(me.id).all();
+  return reply(env, origin, { ok: true, saved: (results || []).map((r) => r.game) });
+}
+
+async function setSave(env, origin, me, body) {
+  if (!me) return reply(env, origin, { ok: false, why: 'signin' }, { status: 401 });
+  const game = String((body && body.game) || '');
+  if (!ID.test(game)) return reply(env, origin, { ok: false, why: 'bad' }, { status: 400 });
+  if (body.on) {
+    if (!(await known(env, game))) return reply(env, origin, { ok: false, why: 'unknown game' }, { status: 404 });
+    const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM saves WHERE user = ?').bind(me.id).first();
+    if (n && n.n >= 500) return reply(env, origin, { ok: false, why: 'full' }, { status: 429 });
+    await env.DB.prepare('INSERT OR IGNORE INTO saves (user, game, created) VALUES (?, ?, ?)').bind(me.id, game, now()).run();
+  } else {
+    await env.DB.prepare('DELETE FROM saves WHERE user = ? AND game = ?').bind(me.id, game).run();
+  }
+  return reply(env, origin, { ok: true, on: !!body.on });
 }
 
 /* ── счётчики ──────────────────────────────────────────── */
@@ -526,7 +551,9 @@ const SCHEMA = [
     'by TEXT, by_url TEXT, contact TEXT, user TEXT, ip TEXT, ' +
     "status TEXT NOT NULL DEFAULT 'pending', created INTEGER NOT NULL, decided INTEGER)",
   'CREATE INDEX IF NOT EXISTS submissions_status ON submissions (status, created)',
-  'CREATE UNIQUE INDEX IF NOT EXISTS submissions_game ON submissions (game)'
+  'CREATE UNIQUE INDEX IF NOT EXISTS submissions_game ON submissions (game)',
+  'CREATE TABLE IF NOT EXISTS saves (user TEXT NOT NULL, game TEXT NOT NULL, created INTEGER NOT NULL, ' +
+    'PRIMARY KEY (user, game))'
 ];
 let installed = null;
 function install(env) {
@@ -713,6 +740,16 @@ export default {
           google: googleId(env),
           max: MAX_LEN
         }, { headers: { 'Cache-Control': 'public, max-age=300' } });
+      }
+
+      if (path === '/saves') {
+        const me = await who(env, request);
+        if (m === 'GET') return mySaves(env, origin, me);
+        if (m === 'POST') {
+          let body = null;
+          try { body = await request.json(); } catch (e) { body = null; }
+          return setSave(env, origin, me, body || {});
+        }
       }
 
       if (path === '/submit' && m === 'POST') {

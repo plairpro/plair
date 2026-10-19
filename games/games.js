@@ -70,7 +70,10 @@
      чтобы порядок был устойчивым, а не случайным. */
   var SORTS = { fresh: 'New', hot: 'Popular' };
   var order = 'fresh';
-  try { if (SORTS[localStorage.getItem('plair-order')]) order = localStorage.getItem('plair-order'); } catch (e) {}
+  try {
+    var keptOrder = localStorage.getItem('plair-order');
+    if (SORTS[keptOrder] || keptOrder === 'saved') order = keptOrder;
+  } catch (e) {}
 
   /* Случайный номер этого браузера. Нужен ровно для двух вещей: не дать
      накрутить запуски перезагрузкой и не дать лайкнуть дважды. Человека
@@ -135,6 +138,9 @@
 
   function byDate(a, b) { return String(b.added).localeCompare(String(a.added)); }
   function byScore(a, b) { return score(b) - score(a) || byDate(a, b); }
+  // Избранное — в том порядке, в каком сохраняли: последнее сверху.
+  function bySaved(a, b) { return savedList.indexOf(a.id) - savedList.indexOf(b.id); }
+  function viewOrder() { return order === 'saved' && !meUser ? 'fresh' : order; }
   var picked = [];
 
   var ICON_USER = '<svg viewBox="0 0 24 24" aria-hidden="true">' +
@@ -194,10 +200,13 @@
     if (!games.length) { $('filters').innerHTML = ''; return; }
     /* Переключатель порядка идёт первым и потому всегда виден: ряд
        жанров прокручивается, а начинается он именно отсюда. */
+    var kinds = Object.keys(SORTS);
+    // «Saved» — третья вкладка, только для вошедших: их избранное.
+    if (meUser) kinds.push('saved');
     var sorts = '<div class="g-sort" role="group" aria-label="Order">' +
-      Object.keys(SORTS).map(function (k) {
+      kinds.map(function (k) {
         return '<button class="g-sortbtn" type="button" data-order="' + k + '" aria-pressed="' +
-          (k === order) + '">' + SORTS[k] + '</button>';
+          (k === viewOrder()) + '">' + (SORTS[k] || 'Saved') + '</button>';
       }).join('') + '</div>';
     var chips = list.length > 1 ? '<span class="g-div" aria-hidden="true"></span>' +
       list.map(function (t) {
@@ -236,7 +245,7 @@
             '<a class="g-author" href="' + esc(g.byUrl || ('https://github.com/' + g.by)) + '" target="_blank" rel="noopener">@' +
               esc(g.by) + '</a>' +
             /* Лайк, комментарии и «поделиться» — строкой справа от автора. */
-            '<span class="g-acts-row">' + likeHTML(i) + talkHTML(i) + shareHTML(i, 'rail') + '</span>' +
+            '<span class="g-acts-row">' + likeHTML(i) + talkHTML(i) + saveHTML(i) + shareHTML(i, 'rail') + '</span>' +
           '</div></div>' +
       '</div></section>';
   }
@@ -247,9 +256,17 @@
   function renderFeed() {
     var deck = $('feed');
     deck.classList.remove('is-moved');
+    var how = viewOrder();
     var list = games.filter(function (g) {
-      return (filter === 'All' || (g.tags || []).indexOf(filter) !== -1) && matches(g);
-    }).sort(order === 'hot' ? byScore : byDate);
+      return (filter === 'All' || (g.tags || []).indexOf(filter) !== -1) && matches(g) &&
+        (how !== 'saved' || savedList.indexOf(g.id) !== -1);
+    }).sort(how === 'hot' ? byScore : how === 'saved' ? bySaved : byDate);
+    if (how === 'saved' && !list.length && games.length) {
+      deck.innerHTML = '<div class="g-empty"><h2>Nothing saved yet</h2>' +
+        '<p>Tap the bookmark under any game and it lands here &mdash; on every device you sign in on.</p>' +
+        '<button class="g-link" type="button" data-order="fresh">Back to all games</button></div>';
+      return;
+    }
     if (!games.length) {
       deck.innerHTML = '<div class="g-empty"><h2>No games yet</h2>' +
         '<p>The catalogue is empty. Add the first one and it shows up here.</p>' +
@@ -748,10 +765,11 @@
 
   var pending = 0;
 
-  function accountSheet() {
+  function accountSheet(note) {
     var s = sheet('<div class="g-sheet-top"><div><h3>' + (meUser ? esc(meUser.name) : 'Your account') + '</h3>' +
-        '<p class="g-lede">' + (meUser ? 'Signed in with Google.' :
-          'Sign in to comment. Playing, liking and adding games need no account.') + '</p></div>' +
+        '<p class="g-lede">' + (meUser ? 'Signed in with Google.' : (note ? esc(note) :
+          'Sign in to comment and keep a list of saved games. Playing, liking and adding games need no account.')) +
+        '</p></div>' +
         '<span class="g-sp"></span>' + X + '</div>' +
       '<div id="a-body"><p class="g-hint busy">&nbsp;</p></div>');
     s.querySelector('.g-sheet').classList.add('is-account');
@@ -774,6 +792,7 @@
       return;
     }
     body.innerHTML =
+      btn('a-saved', 'My saved games' + (savedList.length ? ' (' + savedList.length + ')' : '')) +
       (meUser.admin ? btn('a-review', 'Review new games' + (pending ? ' (' + pending + ')' : '')) : '') +
       '<p class="g-c-me">' +
         '<button class="g-link" type="button" data-signout>Sign out</button> &middot; ' +
@@ -858,6 +877,11 @@
       return;
     }
     if ((el = t.closest('#a-review'))) { reviewSheet(); return; }
+    if ((el = t.closest('#a-saved'))) {
+      order = 'saved';
+      try { localStorage.setItem('plair-order', order); } catch (e) {}
+      shut(); renderFilters(); renderFeed(); return;
+    }
     if ((el = t.closest('[data-rv-try]'))) {
       var it = review[Number(el.dataset.rvTry)];
       if (it) play({ id: 'try', title: it.title, url: it.url }, { noHash: true, preview: true });
@@ -866,13 +890,17 @@
     if ((el = t.closest('[data-rv-ok]'))) { decideGame(el.dataset.rvOk, 'approve', el); return; }
     if ((el = t.closest('[data-rv-no]'))) { decideGame(el.dataset.rvNo, 'reject', el); return; }
     if (open && open.querySelector('.is-account')) {
-      if (t.closest('[data-signout]')) { dropSession(); drawWho(); drawAccount(); toast('Signed out'); return; }
+      if (t.closest('[data-signout]')) {
+        dropSession(); drawWho(); drawAccount(); loadSaves(); renderFilters(); renderFeed();
+        toast('Signed out'); return;
+      }
       if ((el = t.closest('[data-forget]'))) {
         twoStep(el, 'Delete everything? Tap again', function () {
           el.disabled = true;
           api('/me', { method: 'DELETE' }).then(function (d) {
             if (!d.ok) throw new Error('forget');
-            dropSession(); drawWho(); drawAccount(); toast('Your comments and account are gone'); loadCounts();
+            dropSession(); drawWho(); drawAccount(); loadSaves(); renderFilters(); renderFeed();
+            toast('Your comments and account are gone'); loadCounts();
           }).catch(function () { el.disabled = false; toast('That did not work. Try again.'); });
         });
       }
@@ -1187,6 +1215,57 @@
     });
   }
 
+  /* ── избранное ───────────────────────────────────────── */
+  /* Закладка под игрой. Без входа предлагает войти: список хранится на
+     сервере, чтобы был виден на любом устройстве. */
+  var savedList = [];
+
+  var ICON_SAVE = '<svg class="g-line" viewBox="0 0 24 24" aria-hidden="true">' +
+    '<path d="M7 3.8h10a1.2 1.2 0 0 1 1.2 1.2v15.2L12 16.3l-6.2 3.9V5A1.2 1.2 0 0 1 7 3.8z"/></svg>';
+
+  function saveHTML(i) {
+    if (!COUNTS) return '';
+    var g = games[i], on = savedList.indexOf(g.id) !== -1;
+    return '<button class="g-act g-save' + (on ? ' is-on' : '') + '" type="button" data-save="' + i + '" ' +
+      'aria-pressed="' + on + '" aria-label="' + (on ? 'Remove from saved' : 'Save') + ' ' + esc(g.title) + '">' +
+      ICON_SAVE + '</button>';
+  }
+
+  function drawSaves() {
+    [].forEach.call(document.querySelectorAll('[data-save]'), function (b) {
+      var g = games[Number(b.dataset.save)], on = !!g && savedList.indexOf(g.id) !== -1;
+      b.classList.toggle('is-on', on);
+      b.setAttribute('aria-pressed', String(on));
+    });
+  }
+
+  function loadSaves() {
+    if (!meUser || !COUNTS) { savedList = []; drawSaves(); return Promise.resolve(); }
+    return api('/saves').then(function (d) {
+      savedList = d.ok ? d.saved : [];
+      drawSaves();
+      renderFilters();
+      if (order === 'saved') renderFeed();
+    }).catch(function () {});
+  }
+
+  function toggleSave(g, btn) {
+    if (!meUser) { accountSheet('Sign in to save games. Your list follows you to any device.'); return; }
+    var on = savedList.indexOf(g.id) === -1;
+    if (on) savedList.unshift(g.id); else savedList = savedList.filter(function (x) { return x !== g.id; });
+    drawSaves();
+    if (on && btn) { btn.classList.remove('is-pop'); void btn.offsetWidth; btn.classList.add('is-pop'); }
+    toast(on ? 'Saved' : 'Removed from saved');
+    api('/saves', { method: 'POST', body: { game: g.id, on: on } }).then(function (d) {
+      if (!d.ok) throw new Error('save');
+      if (!on && order === 'saved') renderFeed();
+    }).catch(function () {
+      if (on) savedList = savedList.filter(function (x) { return x !== g.id; }); else savedList.unshift(g.id);
+      drawSaves();
+      toast('No connection — not saved');
+    });
+  }
+
   function drawTalk(g) {
     [].forEach.call(document.querySelectorAll('[data-talk-n]'), function (el) {
       if (el.getAttribute('data-talk-n') === g.id) el.textContent = g.comments ? compact(g.comments) : '';
@@ -1388,6 +1467,7 @@
       if (talk && open === talk.s) { drawBox(); reloadList(); }
       if (open && open.querySelector('.is-account')) accountSheet();
       loadPending();
+      loadSaves();
       toast('Signed in as ' + d.user.name);
     }).catch(function () { toast('Sign-in did not go through. Try again.'); });
   }
@@ -1444,6 +1524,7 @@
     if (!t.closest) return;
     if ((el = t.closest('[data-talk]'))) { closeShares(); talkSheet(games[Number(el.dataset.talk)]); return; }
     if ((el = t.closest('[data-like]'))) { closeShares(); toggleLike(games[Number(el.dataset.like)], el); return; }
+    if ((el = t.closest('[data-save]'))) { closeShares(); toggleSave(games[Number(el.dataset.save)], el); return; }
     if (!talk || !open || open !== talk.s) return;
     if ((el = t.closest('[data-signin]'))) {
       var back = location.origin + location.pathname + '?g=' + encodeURIComponent(talk.g.id) + '&c=1';
@@ -1810,6 +1891,7 @@
   drawWho();
   loadMe().then(function () {
     drawWho();
+    loadSaves();
     loadPending().then(function () {
       // Ссылка из уведомления о новой игре: сразу открыть очередь.
       if (new URLSearchParams(location.search).get('review') === '1') {
