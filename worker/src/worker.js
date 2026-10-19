@@ -450,6 +450,7 @@ async function forgetMe(env, origin, me) {
     ).bind(me.id),
     env.DB.prepare('DELETE FROM comments WHERE user = ?').bind(me.id),
     env.DB.prepare('DELETE FROM saves WHERE user = ?').bind(me.id),
+    env.DB.prepare('DELETE FROM lists WHERE user = ?').bind(me.id),
     env.DB.prepare('DELETE FROM users WHERE id = ?').bind(me.id)
   ]);
   return reply(env, origin, { ok: true });
@@ -477,6 +478,38 @@ async function setSave(env, origin, me, body) {
     await env.DB.prepare('DELETE FROM saves WHERE user = ? AND game = ?').bind(me.id, game).run();
   }
   return reply(env, origin, { ok: true, on: !!body.on });
+}
+
+/* PLAIR-лист: делимся своим избранным по ссылке plair.pro/?list=<код>.
+   Список живой — что человек сохранит потом, увидят и по старой ссылке. */
+const CODE = /^[A-Za-z0-9]{8,12}$/;
+function newCode() {
+  const abc = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from(crypto.getRandomValues(new Uint8Array(10)), (b) => abc[b % abc.length]).join('');
+}
+
+async function shareList(env, origin, me) {
+  if (!me) return reply(env, origin, { ok: false, why: 'signin' }, { status: 401 });
+  let row = await env.DB.prepare('SELECT code FROM lists WHERE user = ?').bind(me.id).first();
+  if (!row) {
+    await env.DB.prepare('INSERT OR IGNORE INTO lists (code, user, created) VALUES (?, ?, ?)').bind(newCode(), me.id, now()).run();
+    row = await env.DB.prepare('SELECT code FROM lists WHERE user = ?').bind(me.id).first();
+  }
+  return reply(env, origin, { ok: true, code: row.code });
+}
+
+async function readList(env, origin, code) {
+  if (!CODE.test(code)) return reply(env, origin, { ok: false, why: 'bad' }, { status: 400 });
+  const row = await env.DB.prepare(
+    'SELECT l.user, u.name, u.avatar FROM lists l JOIN users u ON u.id = l.user WHERE l.code = ?'
+  ).bind(code).first();
+  if (!row) return reply(env, origin, { ok: false, why: 'gone' }, { status: 404 });
+  const { results } = await env.DB.prepare('SELECT game FROM saves WHERE user = ? ORDER BY created DESC LIMIT 500')
+    .bind(row.user).all();
+  return reply(env, origin, {
+    ok: true, owner: { name: row.name, avatar: row.avatar || null },
+    games: (results || []).map((r) => r.game)
+  }, { headers: { 'Cache-Control': 'public, max-age=30' } });
 }
 
 /* ── счётчики ──────────────────────────────────────────── */
@@ -553,7 +586,10 @@ const SCHEMA = [
   'CREATE INDEX IF NOT EXISTS submissions_status ON submissions (status, created)',
   'CREATE UNIQUE INDEX IF NOT EXISTS submissions_game ON submissions (game)',
   'CREATE TABLE IF NOT EXISTS saves (user TEXT NOT NULL, game TEXT NOT NULL, created INTEGER NOT NULL, ' +
-    'PRIMARY KEY (user, game))'
+    'PRIMARY KEY (user, game))',
+  // PLAIR-лист: публичная ссылка на чьё-то избранное. Код случайный —
+  // по нему нельзя узнать аккаунт, и подобрать чужой список тоже нельзя.
+  'CREATE TABLE IF NOT EXISTS lists (code TEXT PRIMARY KEY, user TEXT NOT NULL UNIQUE, created INTEGER NOT NULL)'
 ];
 let installed = null;
 function install(env) {
@@ -751,6 +787,10 @@ export default {
           return setSave(env, origin, me, body || {});
         }
       }
+
+      if (path === '/lists' && m === 'POST') return shareList(env, origin, await who(env, request));
+      const lst = path.match(/^\/lists\/([A-Za-z0-9]{1,20})$/);
+      if (lst && m === 'GET') return readList(env, origin, lst[1]);
 
       if (path === '/submit' && m === 'POST') {
         let body = null;

@@ -140,6 +140,7 @@
   function byScore(a, b) { return score(b) - score(a) || byDate(a, b); }
   // Избранное — в том порядке, в каком сохраняли: последнее сверху.
   function bySaved(a, b) { return savedList.indexOf(a.id) - savedList.indexOf(b.id); }
+  function byList(a, b) { return listView.ids.indexOf(a.id) - listView.ids.indexOf(b.id); }
   function viewOrder() { return order === 'saved' && !meUser ? 'fresh' : order; }
   var picked = [];
 
@@ -203,11 +204,20 @@
     var kinds = Object.keys(SORTS);
     // «Saved» — третья вкладка, только для вошедших: их избранное.
     if (meUser) kinds.push('saved');
-    var sorts = '<div class="g-sort" role="group" aria-label="Order">' +
+    var sorts = (listView
+        ? '<button class="g-listchip" type="button" data-list-close aria-label="Close this list">' +
+            esc(listView.owner.name) + '&rsquo;s list &middot; ' + listView.ids.length +
+            '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>'
+        : '') +
+      '<div class="g-sort" role="group" aria-label="Order">' +
       kinds.map(function (k) {
         return '<button class="g-sortbtn" type="button" data-order="' + k + '" aria-pressed="' +
-          (k === viewOrder()) + '">' + (SORTS[k] || 'Saved') + '</button>';
-      }).join('') + '</div>';
+          (!listView && k === viewOrder()) + '">' + (SORTS[k] || 'Saved') + '</button>';
+      }).join('') + '</div>' +
+      (!listView && viewOrder() === 'saved' && savedList.length
+        ? '<button class="g-listchip is-share" type="button" data-list-share>Share list' +
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg></button>'
+        : '');
     var chips = list.length > 1 ? '<span class="g-div" aria-hidden="true"></span>' +
       list.map(function (t) {
         return '<button class="g-chip" type="button" data-tag="' + esc(t) + '" aria-pressed="' +
@@ -256,11 +266,18 @@
   function renderFeed() {
     var deck = $('feed');
     deck.classList.remove('is-moved');
-    var how = viewOrder();
+    var how = listView ? 'list' : viewOrder();
     var list = games.filter(function (g) {
       return (filter === 'All' || (g.tags || []).indexOf(filter) !== -1) && matches(g) &&
-        (how !== 'saved' || savedList.indexOf(g.id) !== -1);
-    }).sort(how === 'hot' ? byScore : how === 'saved' ? bySaved : byDate);
+        (how !== 'saved' || savedList.indexOf(g.id) !== -1) &&
+        (how !== 'list' || listView.ids.indexOf(g.id) !== -1);
+    }).sort(how === 'hot' ? byScore : how === 'saved' ? bySaved : how === 'list' ? byList : byDate);
+    if (how === 'list' && !list.length && games.length) {
+      deck.innerHTML = '<div class="g-empty"><h2>This list is empty for now</h2>' +
+        '<p>' + esc(listView.owner.name) + ' has not saved any games yet.</p>' +
+        '<button class="g-link" type="button" data-list-close>See all games</button></div>';
+      return;
+    }
     if (how === 'saved' && !list.length && games.length) {
       deck.innerHTML = '<div class="g-empty"><h2>Nothing saved yet</h2>' +
         '<p>Tap the bookmark under any game and it lands here &mdash; on every device you sign in on.</p>' +
@@ -793,6 +810,8 @@
     }
     body.innerHTML =
       btn('a-saved', 'My saved games' + (savedList.length ? ' (' + savedList.length + ')' : '')) +
+      (savedList.length ? '<p class="g-hint" style="text-align:center"><button class="g-link" type="button" data-list-share>' +
+        'Share my list as a link</button></p>' : '') +
       (meUser.admin ? btn('a-review', 'Review new games' + (pending ? ' (' + pending + ')' : '')) : '') +
       '<p class="g-c-me">' +
         '<button class="g-link" type="button" data-signout>Sign out</button> &middot; ' +
@@ -1219,6 +1238,44 @@
   /* Закладка под игрой. Без входа предлагает войти: список хранится на
      сервере, чтобы был виден на любом устройстве. */
   var savedList = [];
+  var listView = null;   // чужой (или свой) PLAIR-лист по ссылке ?list=<код>
+
+  function openList(code) {
+    if (!COUNTS || !/^[A-Za-z0-9]{8,12}$/.test(code)) return Promise.resolve();
+    return fetch(COUNTS + '/lists/' + code).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d || !d.ok) { toast('That list is no longer available'); closeList(); return; }
+      listView = { code: code, owner: d.owner, ids: d.games };
+      renderFilters(); renderFeed();
+    }).catch(function () {});
+  }
+
+  function closeList() {
+    listView = null;
+    try {
+      var u = new URL(location.href);
+      if (u.searchParams.get('list')) {
+        u.searchParams.delete('list');
+        history.replaceState(history.state, '', u.pathname + u.search + u.hash);
+      }
+    } catch (e) {}
+    renderFilters(); renderFeed();
+  }
+
+  function shareMyList(btn) {
+    if (!meUser) { accountSheet('Sign in to save games and share them as a list.'); return; }
+    if (btn) btn.disabled = true;
+    api('/lists', { method: 'POST' }).then(function (d) {
+      if (!d.ok) throw new Error('list');
+      var url = (/(^|\.)plair\.pro$/.test(location.hostname) ? location.origin : 'https://plair.pro') + '/?list=' + d.code;
+      var title = meUser.name + '’s PLAIR list';
+      if (navigator.share && matchMedia('(pointer:coarse)').matches) {
+        navigator.share({ title: title, text: title + ' — games worth a try', url: url }).catch(function () {});
+      } else {
+        copyText(url).then(function () { toast('Link to your list copied'); }, function () { toast(url); });
+      }
+    }).catch(function () { toast('That did not work. Try again.'); })
+      .then(function () { if (btn) btn.disabled = false; });
+  }
 
   var ICON_SAVE = '<svg class="g-line" viewBox="0 0 24 24" aria-hidden="true">' +
     '<path d="M7 3.8h10a1.2 1.2 0 0 1 1.2 1.2v15.2L12 16.3l-6.2 3.9V5A1.2 1.2 0 0 1 7 3.8z"/></svg>';
@@ -1256,6 +1313,7 @@
     drawSaves();
     if (on && btn) { btn.classList.remove('is-pop'); void btn.offsetWidth; btn.classList.add('is-pop'); }
     toast(on ? 'Saved' : 'Removed from saved');
+    if (order === 'saved') renderFilters();
     api('/saves', { method: 'POST', body: { game: g.id, on: on } }).then(function (d) {
       if (!d.ok) throw new Error('save');
       if (!on && order === 'saved') renderFeed();
@@ -1525,6 +1583,8 @@
     if ((el = t.closest('[data-talk]'))) { closeShares(); talkSheet(games[Number(el.dataset.talk)]); return; }
     if ((el = t.closest('[data-like]'))) { closeShares(); toggleLike(games[Number(el.dataset.like)], el); return; }
     if ((el = t.closest('[data-save]'))) { closeShares(); toggleSave(games[Number(el.dataset.save)], el); return; }
+    if ((el = t.closest('[data-list-close]'))) { closeList(); return; }
+    if ((el = t.closest('[data-list-share]'))) { shareMyList(el); return; }
     if (!talk || !open || open !== talk.s) return;
     if ((el = t.closest('[data-signin]'))) {
       var back = location.origin + location.pathname + '?g=' + encodeURIComponent(talk.g.id) + '&c=1';
@@ -1719,6 +1779,7 @@
     if (el.dataset.tag) { filter = el.dataset.tag; renderFilters(); renderFeed(); return; }
     if (el.dataset.qclear !== undefined) { setQuery(''); $('q').focus(); return; }
     if (el.dataset.order) {
+      if (listView) { listView = null; try { var lu = new URL(location.href); lu.searchParams.delete('list'); history.replaceState(history.state, '', lu.pathname + lu.search + lu.hash); } catch (e2) {} }
       order = el.dataset.order;
       try { localStorage.setItem('plair-order', order); } catch (e) {}
       renderFilters(); renderFeed(); return;
@@ -1921,6 +1982,8 @@
         games.filter(function (g) { return g.id === want; })[0];
       if (back && COUNTS) talkSheet(back);
       if (authNote) authToast();
+      var listCode = new URLSearchParams(location.search).get('list');
+      if (listCode) openList(listCode);
       /* Счётчики приезжают следом и ничего не ломают, если не приехали:
          лента к этому моменту уже стоит на экране. */
       loadLiked();

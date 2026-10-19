@@ -54,3 +54,6 @@ CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 
 -- Избранное: какие игры человек сохранил себе.
 CREATE TABLE IF NOT EXISTS saves (user TEXT NOT NULL, game TEXT NOT NULL, created INTEGER NOT NULL, PRIMARY KEY (user, game));
+
+-- PLAIR-листы: публичная ссылка на избранное человека.
+CREATE TABLE IF NOT EXISTS lists (code TEXT PRIMARY KEY, user TEXT NOT NULL UNIQUE, created INTEGER NOT NULL);
