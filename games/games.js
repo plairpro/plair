@@ -52,9 +52,9 @@
   function words(q) { return fold(q).split(/[\s,]+/).filter(Boolean); }
   function haystack(g) {
     if (g._hay == null) {
-      /* id — латинское имя игры из адреса репозитория. С ним «Офис»
-         находится и по «office», «Сдвиг» — по «shift». */
-      g._hay = fold([g.title, g.id, (g.tags || []).join(' '), g.blurb, g.by, '@' + g.by].join(' '));
+      /* aka — прежнее, русское название: «Office» находится и по «офис»,
+         «Shift» — по «сдвиг». */
+      g._hay = fold([g.title, g.aka, g.id, (g.tags || []).join(' '), g.blurb, g.by, '@' + g.by].join(' '));
     }
     return g._hay;
   }
@@ -66,10 +66,9 @@
   }
 
   /* Порядок в ленте. По умолчанию — свежие сверху.
-     Популярность: запуск весит единицу, лайк — пять, комментарий —
-     пятнадцать. Лестница отражает цену действия: запуск это одно
-     касание, лайк требует входа, комментарий — ещё и написать.
-     Времени в формуле нет намеренно: каталог маленький, и затухание
+     Популярность — см. WEIGHT ниже: запуск и минута в игре по единице,
+     лайк 5, комментарий 8, репост и сохранение по 10.
+     Возраста игры в формуле нет намеренно: каталог маленький, и затухание
      по возрасту тут только путало бы. Равный счёт разводим по дате,
      чтобы порядок был устойчивым, а не случайным. */
   var SORTS = { fresh: 'New', hot: 'Popular' };
@@ -318,9 +317,13 @@
         '<div class="g-info"><h2>' + esc(g.title) + '</h2>' +
           (g.blurb ? '<button class="g-blurb" type="button" data-more ' +
             'aria-expanded="false">' + esc(g.blurb) + '</button>' : '') +
-          '<div class="g-tags">' + (g.tags || []).map(function (t, n) {
-            return '<span class="g-tag' + (n > 2 ? ' is-extra' : '') + '">' + esc(t) + '</span>';
-          }).join('') + '</div>' +
+          /* Жанры — все, сколько влезает в строку. Не влезшие прячутся
+             под «+N» и показываются вместе с полным описанием. */
+          '<div class="g-tags">' + (g.tags || []).map(function (t) {
+            return '<span class="g-tag">' + esc(t) + '</span>';
+          }).join('') +
+            '<button class="g-tag g-tag-more" type="button" data-more aria-expanded="false" ' +
+              'aria-label="Show all genres" hidden></button></div>' +
           '<div class="g-meta">' +
             '<a class="g-author" href="' + esc(g.byUrl || ('https://github.com/' + g.by)) + '" target="_blank" rel="noopener">@' +
               esc(g.by) + '</a>' +
@@ -329,6 +332,38 @@
           '</div></div>' +
       '</div></section>';
   }
+
+  /* Сколько жанров влезает в одну строку под описанием. Меряем в
+     свёрнутом виде; если всё влезло и описание короткое, разворачивать
+     нечего — стрелка у описания пропадает. */
+  function fitTags() {
+    [].forEach.call(document.querySelectorAll('.g-slide .g-info'), function (info) {
+      var box = info.querySelector('.g-tags');
+      if (!box) return;
+      var open = info.classList.contains('is-open');
+      if (open) info.classList.remove('is-open');
+      var tags = [].slice.call(box.querySelectorAll('.g-tag:not(.g-tag-more)'));
+      var more = box.querySelector('.g-tag-more');
+      tags.forEach(function (t) { t.classList.remove('is-cut'); });
+      more.hidden = true;
+      var top = tags.length ? tags[0].offsetTop : 0;
+      var cut = 0;
+      if (tags.length && tags[tags.length - 1].offsetTop > top) {
+        more.hidden = false;
+        for (var k = tags.length - 1; k > 0; k--) {
+          tags[k].classList.add('is-cut'); cut++;
+          more.textContent = '+' + cut;
+          if (more.offsetTop === top && tags[k - 1].offsetTop === top) break;
+        }
+      }
+      var blurb = info.querySelector('.g-blurb');
+      var long = blurb && blurb.scrollHeight > blurb.clientHeight + 1;
+      info.classList.toggle('has-more', !!(cut || long));
+      if (open) info.classList.add('is-open');
+    });
+  }
+  addEventListener('resize', function () { requestAnimationFrame(fitTags); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitTags);
 
   var SWIPE = '<div class="g-swipe"><svg viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6" ' +
     'stroke-linecap="round" stroke-linejoin="round"/></svg>Swipe</div>';
@@ -379,6 +414,7 @@
           '<p>No game is tagged &laquo;' + esc(filter) + '&raquo;.</p></div>';
       return;
     }
+    requestAnimationFrame(fitTags);
     deck.innerHTML = list.map(function (g, pos) { return slideHTML(g, games.indexOf(g), pos); }).join('') +
       (list.length > 1 ? SWIPE : '');
     deck.scrollTop = 0;
@@ -1862,8 +1898,9 @@
     }
     if (el.dataset.more !== undefined) {
       var box = el.closest('.g-info');
+      if (!box.classList.contains('has-more')) return;
       var on = box.classList.toggle('is-open');
-      el.setAttribute('aria-expanded', on ? 'true' : 'false');
+      [].forEach.call(box.querySelectorAll('[data-more]'), function (b) { b.setAttribute('aria-expanded', on ? 'true' : 'false'); });
       return;
     }
     if (el.dataset.play !== undefined) { play(games[Number(el.dataset.play)]); return; }

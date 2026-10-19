@@ -184,11 +184,17 @@
 .g-blurb::after{content:" \25BE";color:rgba(255,255,255,.55)}
 .g-info.is-open .g-blurb::after{content:" \25B4"}
 .g-blurb:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
-/* На экране видны три жанра, остальные приезжают вместе с описанием —
-   четыре подряд уносили подпись на вторую строку. */
+/* Жанры — в одну строку, сколько влезает (считает fitTags в games.js).
+   Остальные прячутся под «+N» и приезжают вместе с полным описанием. */
 .g-slide .g-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
-.g-slide .g-tag.is-extra{display:none}
-.g-info.is-open .g-tag.is-extra{display:inline}
+.g-info:not(.is-open) .g-tag.is-cut{display:none}
+.g-info.is-open .g-tag-more{display:none}
+.g-slide .g-tag-more{font-family:inherit;background:rgba(255,255,255,.08);cursor:pointer;line-height:inherit}
+.g-slide .g-tag-more:hover{color:#fff;border-color:rgba(255,255,255,.45)}
+.g-slide .g-tag-more:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* Нечего разворачивать — нет и стрелки. */
+.g-info:not(.has-more) .g-blurb{cursor:default}
+.g-info:not(.has-more) .g-blurb::after{content:none}
 .g-slide .g-tag{font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;font-weight:600;
   color:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.22);
   border-radius:999px;padding:2px 7px;backdrop-filter:blur(6px)}

@@ -1,21 +1,8 @@
 [
   {
-    "id": "colorful-animals",
-    "title": "Colorful Animals",
-    "blurb": "Meditative coloring book for children",
-    "tags": [
-      "Casual",
-      "Puzzle"
-    ],
-    "cover": "/games/covers/colorful-animals.webp",
-    "url": "https://f42a.github.io/colorful-animals/",
-    "repo": "https://github.com/f42a/colorful-animals",
-    "by": "f42a",
-    "added": "2026-10-15"
-  },
-  {
     "id": "shift",
-    "title": "Сдвиг",
+    "title": "Shift",
+    "aka": "Сдвиг",
     "blurb": "Tactical robot duel. Push, pull, combo — knock three off the collapsing arena.",
     "tags": [
       "Strategy",
@@ -31,7 +18,8 @@
   },
   {
     "id": "office",
-    "title": "Офис",
+    "title": "Office",
+    "aka": "Офис",
     "blurb": "Two to four colleagues brawl in the open-plan. Staplers, mops, coffee.",
     "tags": [
       "Multiplayer",
@@ -47,7 +35,8 @@
   },
   {
     "id": "rover",
-    "title": "Путь знаний",
+    "title": "Road to Knowledge",
+    "aka": "Путь знаний",
     "blurb": "The same rover, a school run: catch the right answers, dodge the wrong ones.",
     "tags": [
       "Runner",
@@ -63,7 +52,8 @@
   },
   {
     "id": "scrollprincess",
-    "title": "Принцесса Скролл",
+    "title": "Scroll Princess",
+    "aka": "Принцесса Скролл",
     "blurb": "Climb a tower of danger with nothing but the scroll of your thumb.",
     "tags": [
       "Platformer",
@@ -79,7 +69,8 @@
   },
   {
     "id": "dron",
-    "title": "Дрон",
+    "title": "Drone",
+    "aka": "Дрон",
     "blurb": "Fly an armoured industrial drone deep into a dark cave. One tap lifts you.",
     "tags": [
       "Simulation",
@@ -95,7 +86,8 @@
   },
   {
     "id": "memsbox",
-    "title": "Мемные арканы",
+    "title": "Meme Arcana",
+    "aka": "Мемные арканы",
     "blurb": "Rip seals, collect thirty-six internet memes drawn as tarot cards.",
     "tags": [
       "Card",
