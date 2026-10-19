@@ -514,6 +514,10 @@ async function readList(env, origin, code) {
 
 /* ── счётчики ──────────────────────────────────────────── */
 
+const SHARES_A_DAY = 1;       // репостов одной игры с браузера в сутки
+const SECONDS_A_CALL = 60;    // секунд в игре за один запрос
+const SECONDS_A_DAY = 1800;   // секунд одной игры с браузера в сутки
+
 async function counters(env, origin, ctx, url, body) {
   const id = body && String(body.id || '');
   const visitor = body && String(body.visitor || '');
@@ -540,6 +544,34 @@ async function counters(env, origin, ctx, url, body) {
     ctx.waitUntil(env.DB.prepare('DELETE FROM plays_today WHERE day < ?').bind(day).run());
     const cur = await env.DB.prepare('SELECT plays FROM games WHERE id = ?').bind(id).first();
     return reply(env, origin, { ok: true, counted: true, plays: (cur && cur.plays) || 0 });
+  }
+
+  if (url.pathname === '/share' || url.pathname === '/time') {
+    const share = url.pathname === '/share';
+    const kind = share ? 'share' : 'time';
+    // Репост засчитываем один в сутки с браузера на игру. Время — кусками
+    // не больше минуты за запрос и не больше получаса в сутки.
+    const want = share ? 1 : Math.floor(Number(body.seconds) || 0);
+    const cap = share ? SHARES_A_DAY : SECONDS_A_DAY;
+    if (!(want > 0)) return reply(env, origin, { ok: false, why: 'bad' }, { status: 400 });
+    const day = today();
+    const row = await env.DB
+      .prepare('SELECT n FROM acts_today WHERE visitor = ? AND game = ? AND day = ? AND kind = ?')
+      .bind(visitor, id, day, kind).first();
+    const add = Math.min(want, SECONDS_A_CALL, cap - ((row && row.n) || 0));
+    if (add > 0) {
+      const col = share ? 'shares' : 'seconds';
+      await env.DB.batch([
+        env.DB.prepare('INSERT INTO games (id, ' + col + ') VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET ' +
+          col + ' = ' + col + ' + excluded.' + col).bind(id, add),
+        env.DB.prepare(
+          'INSERT INTO acts_today (visitor, game, day, kind, n) VALUES (?, ?, ?, ?, ?) ' +
+          'ON CONFLICT(visitor, game, day, kind) DO UPDATE SET n = n + excluded.n'
+        ).bind(visitor, id, day, kind, add)
+      ]);
+      ctx.waitUntil(env.DB.prepare('DELETE FROM acts_today WHERE day < ?').bind(day).run());
+    }
+    return reply(env, origin, { ok: true, counted: Math.max(0, add) });
   }
 
   // /like
@@ -589,7 +621,12 @@ const SCHEMA = [
     'PRIMARY KEY (user, game))',
   // PLAIR-лист: публичная ссылка на чьё-то избранное. Код случайный —
   // по нему нельзя узнать аккаунт, и подобрать чужой список тоже нельзя.
-  'CREATE TABLE IF NOT EXISTS lists (code TEXT PRIMARY KEY, user TEXT NOT NULL UNIQUE, created INTEGER NOT NULL)'
+  'CREATE TABLE IF NOT EXISTS lists (code TEXT PRIMARY KEY, user TEXT NOT NULL UNIQUE, created INTEGER NOT NULL)',
+  // Суточный учёт репостов и секунд в игре с одного браузера — чтобы их
+  // нельзя было накрутить. Вчерашние строки стираются попутно.
+  'CREATE TABLE IF NOT EXISTS acts_today (visitor TEXT NOT NULL, game TEXT NOT NULL, day TEXT NOT NULL, ' +
+    'kind TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (visitor, game, day, kind))',
+  'CREATE INDEX IF NOT EXISTS acts_today_day ON acts_today (day)'
 ];
 let installed = null;
 function install(env) {
@@ -597,6 +634,9 @@ function install(env) {
     installed = env.DB.batch(SCHEMA.map((q) => env.DB.prepare(q)))
       // Столбец «модератор» появился позже таблицы — добавляем, если его нет.
       .then(() => env.DB.prepare('ALTER TABLE users ADD COLUMN admin INTEGER NOT NULL DEFAULT 0').run().catch(() => {}))
+      // Репосты и время в игре появились позже — тоже добавляем при надобности.
+      .then(() => env.DB.prepare('ALTER TABLE games ADD COLUMN shares INTEGER NOT NULL DEFAULT 0').run().catch(() => {}))
+      .then(() => env.DB.prepare('ALTER TABLE games ADD COLUMN seconds INTEGER NOT NULL DEFAULT 0').run().catch(() => {}))
       .catch((e) => { installed = null; throw e; });
   }
   return installed;
@@ -809,9 +849,16 @@ export default {
       }
 
       if (m === 'GET' && path === '/counts') {
-        const { results } = await env.DB.prepare('SELECT id, plays, likes, comments FROM games').all();
+        const [g, sv] = await env.DB.batch([
+          env.DB.prepare('SELECT id, plays, likes, comments, shares, seconds FROM games'),
+          env.DB.prepare('SELECT game, COUNT(*) AS n FROM saves GROUP BY game')
+        ]);
         const counts = {};
-        for (const r of results || []) counts[r.id] = { plays: r.plays, likes: r.likes, comments: r.comments };
+        const one = (id) => counts[id] || (counts[id] = { plays: 0, likes: 0, comments: 0, shares: 0, seconds: 0, saves: 0 });
+        for (const r of g.results || []) {
+          Object.assign(one(r.id), { plays: r.plays, likes: r.likes, comments: r.comments, shares: r.shares || 0, seconds: r.seconds || 0 });
+        }
+        for (const r of sv.results || []) one(r.game).saves = r.n;
         return reply(env, origin, { ok: true, counts }, { headers: { 'Cache-Control': 'public, max-age=60' } });
       }
 
@@ -843,9 +890,11 @@ export default {
       const del = path.match(/^\/comments\/(\d{1,12})$/);
       if (del && m === 'DELETE') return deleteComment(env, origin, await who(env, request), Number(del[1]));
 
-      if (m === 'POST' && (path === '/play' || path === '/like')) {
+      if (m === 'POST' && /^\/(play|like|share|time)$/.test(path)) {
+        // Время в игре при закрытии вкладки приходит через sendBeacon —
+        // текстом, без заголовка JSON. Читаем тело в любом виде.
         let body = null;
-        try { body = await request.json(); } catch (e) { body = null; }
+        try { body = JSON.parse(await request.text()); } catch (e) { body = null; }
         return counters(env, origin, ctx, url, body);
       }
 

@@ -116,6 +116,67 @@
     }).catch(function () {});
   }
 
+  /* Репост засчитывается один раз в сутки с браузера на игру — как и
+     на сервере. Считаем намерение: нажал соцсеть, скопировал ссылку. */
+  function countShare(g) {
+    if (!COUNTS || !g || !g.id) return;
+    var key = 'plair-shared', day = new Date().toISOString().slice(0, 10), box = {};
+    try { box = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch (e) {}
+    if (box.day !== day) box = { day: day, ids: {} };
+    if (box.ids[g.id]) return;
+    box.ids[g.id] = 1;
+    try { localStorage.setItem(key, JSON.stringify(box)); } catch (e) {}
+    g.shares = (Number(g.shares) || 0) + 1;
+    ping('/share', { id: g.id, visitor: visitor() });
+  }
+
+  /* Отправка «на прощание»: sendBeacon доходит, даже если вкладку уже
+     закрывают. Тело — простой текст, без заголовка JSON: так браузер не
+     устраивает лишний предварительный запрос. */
+  function ping(path, data) {
+    var body = JSON.stringify(data);
+    try { if (navigator.sendBeacon && navigator.sendBeacon(COUNTS + path, body)) return; } catch (e) {}
+    try { fetch(COUNTS + path, { method: 'POST', body: body, keepalive: true }).catch(function () {}); } catch (e) {}
+  }
+
+  /* Время в игре. Идут только секунды, когда игра открыта и вкладка на
+     экране; уходят на сервер кусками по полминуты и при закрытии игры.
+     Сервер принимает не больше получаса в сутки с браузера на игру. */
+  var clock = null;
+  function clockRun() {
+    if (!clock) return;
+    var t = Date.now();
+    if (clock.last) clock.acc += (t - clock.last) / 1000;
+    clock.last = document.visibilityState === 'hidden' ? 0 : t;
+  }
+  function clockSend(all) {
+    if (!clock) return;
+    while (clock.acc >= 30 || (all && clock.acc >= 3)) {
+      var n = Math.min(60, Math.floor(clock.acc));
+      clock.acc -= n;
+      clock.g.seconds = (Number(clock.g.seconds) || 0) + n;
+      ping('/time', { id: clock.g.id, visitor: visitor(), seconds: n });
+      if (all && clock.acc < 3) break;
+    }
+  }
+  function clockStart(g) {
+    clockStop();
+    if (!COUNTS || !g || !g.id) return;
+    clock = { g: g, acc: 0, last: document.visibilityState === 'hidden' ? 0 : Date.now() };
+    clock.timer = setInterval(function () { clockRun(); clockSend(false); }, 15000);
+  }
+  function clockStop() {
+    if (!clock) return;
+    clockRun(); clockSend(true);
+    clearInterval(clock.timer);
+    clock = null;
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (!clock) return;
+    clockRun();
+    if (document.visibilityState === 'hidden') clockSend(true);
+  });
+
   function loadCounts() {
     if (!COUNTS) return Promise.resolve(false);
     return fetch(COUNTS + '/counts')
@@ -126,6 +187,7 @@
           var c = d.counts[g.id];
           if (!c) return;
           g.plays = c.plays; g.likes = c.likes; g.comments = c.comments;
+          g.shares = c.shares || 0; g.saves = c.saves || 0; g.seconds = c.seconds || 0;
           drawTalk(g); drawLike(g);
         });
         return true;
@@ -133,8 +195,15 @@
       .catch(function () { return false; });
   }
 
+  /* Популярность: чем дороже игроку действие, тем больше оно весит.
+     запуск 1 · минута в игре 1 · лайк 5 · комментарий 8 ·
+     репост 10 · сохранение 10. */
+  var WEIGHT = { plays: 1, minutes: 1, likes: 5, comments: 8, shares: 10, saves: 10 };
   function score(g) {
-    return (Number(g.plays) || 0) + 5 * (Number(g.likes) || 0) + 15 * (Number(g.comments) || 0);
+    var n = function (k) { return Number(g[k]) || 0; };
+    return WEIGHT.plays * n('plays') + WEIGHT.minutes * n('seconds') / 60 +
+      WEIGHT.likes * n('likes') + WEIGHT.comments * n('comments') +
+      WEIGHT.shares * n('shares') + WEIGHT.saves * n('saves');
   }
 
   function byDate(a, b) { return String(b.added).localeCompare(String(a.added)); }
@@ -400,11 +469,13 @@
 
       '<h4>How the feed is ordered</h4>' +
       '<p><b>New</b> is the default: whatever was added last comes first. ' +
-      '<b>Popular</b> scores each game as <code>plays + 5 &times; likes + 15 &times; comments</code> ' +
-      '&mdash; the ladder follows what each one costs a player: a launch is one tap, a like is a decision, ' +
-      'a comment needs writing something. Age is deliberately not in the formula.</p>' +
-      '<p class="g-hint">Launches are counted at most ten times a day from one browser, so a game cannot be ' +
-        'pushed up by reloading.</p>' +
+      '<b>Popular</b> scores each game as</p>' +
+      '<p><code>plays + minutes played + 5 &times; likes + 8 &times; comments + 10 &times; shares + 10 &times; saves</code></p>' +
+      '<p>The ladder follows what each action costs a player: a launch is one tap, staying is a minute ' +
+      'of their evening, a like is a decision, a comment needs writing something, and sharing or saving ' +
+      'means they want to come back or bring a friend. Age is deliberately not in the formula.</p>' +
+      '<p class="g-hint">From one browser, a game gets at most ten launches, thirty minutes and one share ' +
+        'a day; a like or a save counts once per person. Reloading does not push a game up.</p>' +
 
       '<h4>Who runs this</h4>' +
       '<p>PLAIR Games is made by PLAIR, a studio that builds games for brands, events and ' +
@@ -976,7 +1047,7 @@
       return n[0] === 'instagram'
         ? '<button class="g-sh is-' + n[0] + '" type="button" data-insta="' + i + '" style="--n:' + k + '" ' +
             'aria-label="' + label + '" title="Instagram">' + icon + '</button>'
-        : '<a class="g-sh is-' + n[0] + '" href="' + esc(shareHref(n[0], g)) + '" target="_blank" rel="noopener" ' +
+        : '<a class="g-sh is-' + n[0] + '" data-g="' + i + '" href=""' + esc(shareHref(n[0], g)) + '" target="_blank" rel="noopener" ' +
             'style="--n:' + k + '" aria-label="' + label + '" title="' + n[1] + '">' + icon + '</a>';
     }).join('') +
       '<button class="g-sh is-copy" type="button" data-copy="' + i + '" style="--n:' + NETS.length + '" ' +
@@ -1049,10 +1120,11 @@
       return;
     }
     var copy = t.closest && t.closest('[data-copy]');
-    if (copy) { copyLink(copy.classList.contains('is-copy') ? copy : null, games[Number(copy.dataset.copy)]); return; }
+    if (copy) { countShare(games[Number(copy.dataset.copy)]); copyLink(copy.classList.contains('is-copy') ? copy : null, games[Number(copy.dataset.copy)]); return; }
     var insta = t.closest && t.closest('[data-insta]');
     if (insta) {
       var g = games[Number(insta.dataset.insta)];
+      countShare(g);
       /* На телефоне системное меню «Поделиться» и есть путь в Инстаграм.
          На компьютере его нет: кладём ссылку в буфер и открываем сайт. */
       if (navigator.share && matchMedia('(pointer:coarse)').matches) {
@@ -1064,6 +1136,8 @@
       closeShares();
       return;
     }
+    var net = t.closest && t.closest('a.g-sh[data-g]');
+    if (net) countShare(games[Number(net.dataset.g)]);
     if (t.closest && t.closest('.g-sh')) { setTimeout(closeShares, 0); return; }
     if (!(t.closest && t.closest('.g-share'))) closeShares();
   });
@@ -1310,6 +1384,7 @@
     if (!meUser) { accountSheet('Sign in to save games. Your list follows you to any device.'); return; }
     var on = savedList.indexOf(g.id) === -1;
     if (on) savedList.unshift(g.id); else savedList = savedList.filter(function (x) { return x !== g.id; });
+    g.saves = Math.max(0, (Number(g.saves) || 0) + (on ? 1 : -1));
     drawSaves();
     if (on && btn) { btn.classList.remove('is-pop'); void btn.offsetWidth; btn.classList.add('is-pop'); }
     toast(on ? 'Saved' : 'Removed from saved');
@@ -1714,6 +1789,7 @@
     f.setAttribute('sandbox',
       'allow-scripts allow-same-origin allow-pointer-lock allow-popups allow-forms allow-modals allow-orientation-lock');
     stage.appendChild(f);
+    if (!opts.preview) clockStart(g);
 
     var landed = false;
     f.addEventListener('load', function () {
@@ -1761,6 +1837,7 @@
     if (!player) return;
     try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {}
     if (wake) { try { wake.release(); } catch (e) {} wake = null; }
+    clockStop();
     killFrames(player);
     player.remove();
     player = null;
@@ -1854,7 +1931,7 @@
 
   /* Уходим со страницы — звук игры уходит с нами. На переключение
      вкладки не трогаем: человек вернётся к своей партии. */
-  addEventListener('pagehide', function () { if (player) killFrames(player); });
+  addEventListener('pagehide', function () { clockStop(); if (player) killFrames(player); });
 
   /* ── поиск ───────────────────────────────────────────── */
 

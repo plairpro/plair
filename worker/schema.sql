@@ -5,7 +5,9 @@ CREATE TABLE IF NOT EXISTS games (
   id       TEXT PRIMARY KEY,
   plays    INTEGER NOT NULL DEFAULT 0,
   likes    INTEGER NOT NULL DEFAULT 0,
-  comments INTEGER NOT NULL DEFAULT 0
+  comments INTEGER NOT NULL DEFAULT 0,
+  shares   INTEGER NOT NULL DEFAULT 0,   -- репосты
+  seconds  INTEGER NOT NULL DEFAULT 0    -- сколько секунд в игре провели
 );
 
 -- Запуски считаются не чаще десяти раз в сутки с одного браузера на игру:
@@ -57,3 +59,8 @@ CREATE TABLE IF NOT EXISTS saves (user TEXT NOT NULL, game TEXT NOT NULL, create
 
 -- PLAIR-листы: публичная ссылка на избранное человека.
 CREATE TABLE IF NOT EXISTS lists (code TEXT PRIMARY KEY, user TEXT NOT NULL UNIQUE, created INTEGER NOT NULL);
+
+-- Суточный учёт репостов и времени в игре с одного браузера:
+-- репост — один в сутки на игру, время — не больше получаса.
+CREATE TABLE IF NOT EXISTS acts_today (visitor TEXT NOT NULL, game TEXT NOT NULL, day TEXT NOT NULL, kind TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (visitor, game, day, kind));
+CREATE INDEX IF NOT EXISTS acts_today_day ON acts_today (day);
