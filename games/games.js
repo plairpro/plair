@@ -732,8 +732,8 @@
      «тема» и «сообщение». Куда слать, берётся из настроек студии
      (window.PLAIR_CONFIG в /content.js) — здесь ключей нет. */
   var cfg = window.PLAIR_CONFIG || {};
-  var cTg = cfg.formService === 'telegram' && cfg.telegramToken && cfg.telegramChat
-    ? { token: String(cfg.telegramToken).trim(), chat: String(cfg.telegramChat).trim() } : null;
+  // Сообщение уходит на наш сервер, тот — в Telegram. Ключа бота здесь нет.
+  var cTg = cfg.formService === 'worker' && /^https:\/\//.test(cfg.formEndpoint || '') ? { url: cfg.formEndpoint } : null;
   var cMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cfg.contactEmail || '') ? cfg.contactEmail : '';
   var cDialog = $('contact-dialog'), cForm = $('contact-form'), cStatus = $('form-status'),
       cSubmit = $('contact-submit'), cSending = false, cBot = false;
@@ -758,15 +758,11 @@
       '&body=' + encodeURIComponent(cMailBody(d));
   }
   function cSend(d) {
-    var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
-    var text = ['<b>Message from PLAIR Games</b>', '',
-      '<b>Name:</b> ' + e(d.name), '<b>Contact:</b> ' + e(d.contact),
-      '<b>Subject:</b> ' + e(d.subject || '—'), '', '<b>Message:</b>', e(d.message)].join('\n');
     var ctl = window.AbortController ? new AbortController() : null;
     var t = setTimeout(function () { if (ctl) ctl.abort(); }, 20000);
-    return fetch('https://api.telegram.org/bot' + encodeURIComponent(cTg.token) + '/sendMessage', {
+    return fetch(cTg.url, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: cTg.chat, text: text, parse_mode: 'HTML', disable_web_page_preview: true }),
+      body: JSON.stringify({ kind: 'games', name: d.name, contact: d.contact, subject: d.subject, message: d.message }),
       signal: ctl ? ctl.signal : undefined
     }).then(function (r) {
       return r.json().catch(function () { return null; }).then(function (j) { return !!(r.ok && j && j.ok === true); });

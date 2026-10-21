@@ -742,46 +742,22 @@
     if (fields) fields.inert = on;
     form.setAttribute('aria-busy', String(on));
   }
-  /* Заявки уходят в Telegram-бота.
-
-     Запрос идёт прямо из браузера посетителя: Bot API отвечает с
-     заголовком, разрешающим обращение с чужого домена, поэтому ответ
-     читается и видно точно — приняли заявку или нет. Никаких догадок по
-     скрытым кадрам, как это было с почтовым сервисом.
-
-     Токен и чат лежат в настройках (content.js) и намеренно не зашиты
-     сюда: их вписывает владелец сайта. Пока их нет, форма работает
-     запасным путём — предлагает написать почтой. */
-  const tg = config.formService === 'telegram'
-    ? { token: String(config.telegramToken || '').trim(), chat: String(config.telegramChat || '').trim() }
-    : null;
-
-  const escTg = (value) => String(value == null ? '' : value)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  /* Заявки уходят на наш сервер (Cloudflare Worker), а он пересылает их
+     в Telegram-бота. Ключ бота хранится на сервере как секрет — в
+     браузер и в публичный content.js он не попадает. Ответ сервера
+     честный: видно, приняли заявку или нет. Пока адреса нет или сервер
+     не ответил, форма предлагает написать почтой. */
+  const tg = config.formService === 'worker' && /^https:\/\//.test(config.formEndpoint || '')
+    ? { url: config.formEndpoint } : null;
 
   async function sendToTelegram(data) {
-    const lines = [
-      '<b>Заявка с сайта PLAIR</b>',
-      '',
-      `<b>Имя:</b> ${escTg(data.name)}`,
-      `<b>Контакт:</b> ${escTg(data.contact)}`,
-      `<b>Бюджет:</b> ${escTg(data.budget || 'не указан')}`,
-      '',
-      '<b>О проекте:</b>',
-      escTg(data.project)
-    ];
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20000);
     try {
-      const response = await fetch(`https://api.telegram.org/bot${encodeURIComponent(tg.token)}/sendMessage`, {
+      const response = await fetch(tg.url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: tg.chat,
-          text: lines.join('\n'),
-          parse_mode: 'HTML',
-          disable_web_page_preview: true
-        }),
+        body: JSON.stringify({ kind: 'studio', name: data.name, contact: data.contact, budget: data.budget, project: data.project }),
         signal: controller.signal
       });
       const result = await response.json().catch(() => null);
@@ -791,7 +767,7 @@
     }
   }
 
-  const endpointReady = !!tg && !!tg.token && !!tg.chat;
+  const endpointReady = !!tg;
   const emailReady = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(config.contactEmail || '');
   if (!endpointReady && !emailReady) {
     status.textContent = 'Форма пока не принимает заявки.';

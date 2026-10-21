@@ -907,6 +907,40 @@ async function notifyText(env, text) {
   } catch (e) { /* не страшно */ }
 }
 
+/* Формы «Связаться» (лента) и «Заявка» (студия). Раньше браузер слал их
+   прямо в Telegram, и ключ бота лежал в открытом content.js. Теперь
+   ключ — секрет Worker’а (TG_BOT_TOKEN), браузер его не видит. */
+const CONTACTS_A_DAY = 10;      // сообщений с одного адреса в сутки
+async function sendTelegram(env, text) {
+  if (!env.TG_BOT_TOKEN || !env.TG_CHAT_ID) return false;
+  try {
+    const r = await fetch('https://api.telegram.org/bot' + env.TG_BOT_TOKEN + '/sendMessage', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: env.TG_CHAT_ID, text: text, parse_mode: 'HTML', disable_web_page_preview: true })
+    });
+    const j = await r.json().catch(() => null);
+    return !!(r.ok && j && j.ok === true);
+  } catch (e) { return false; }
+}
+async function contactForm(env, origin, request, body) {
+  const f = (k, max) => cleanText(body && body[k]).trim().slice(0, max);
+  const studio = body && body.kind === 'studio';
+  const name = f('name', 100), contact = f('contact', 120), subject = f('subject', 150), budget = f('budget', 80);
+  const text = f('message', 3500) || f('project', 3500);
+  if (!name || !text) return reply(env, origin, { ok: false, why: 'empty' }, { status: 400 });
+  if (!env.TG_BOT_TOKEN || !env.TG_CHAT_ID) return reply(env, origin, { ok: false, why: 'off' }, { status: 503 });
+  const ip = (await sha256hex((request.headers.get('CF-Connecting-IP') || '') + '|' + await secret(env))).slice(0, 24);
+  if (!(await dayCount(env, ip, 'contact', 'contact', CONTACTS_A_DAY))) return reply(env, origin, { ok: false, why: 'day' }, { status: 429 });
+  const e = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const lines = studio
+    ? ['<b>Заявка с сайта PLAIR</b>', '', '<b>Имя:</b> ' + e(name), '<b>Контакт:</b> ' + e(contact || '—'),
+       '<b>Бюджет:</b> ' + e(budget || 'не указан'), '', '<b>О проекте:</b>', e(text)]
+    : ['<b>Message from PLAIR Games</b>', '', '<b>Name:</b> ' + e(name), '<b>Contact:</b> ' + e(contact || '—'),
+       '<b>Subject:</b> ' + e(subject || '—'), '', '<b>Message:</b>', e(text)];
+  const ok = await sendTelegram(env, lines.join('\n'));
+  return ok ? reply(env, origin, { ok: true }) : reply(env, origin, { ok: false, why: 'telegram' }, { status: 502 });
+}
+
 async function submitGame(env, origin, request, ctx, me, body) {
   body = body || {};
   const url = cleanUrl(body.url);
@@ -1096,6 +1130,11 @@ export default {
       const lst = path.match(/^\/lists\/([A-Za-z0-9]{1,20})$/);
       if (lst && m === 'GET') return readList(env, origin, lst[1]);
 
+      if (path === '/contact' && m === 'POST') {
+        let body = null;
+        try { body = await request.json(); } catch (e) { body = null; }
+        return contactForm(env, origin, request, body);
+      }
       if (path === '/submit' && m === 'POST') {
         let body = null;
         try { body = await request.json(); } catch (e) { body = null; }
