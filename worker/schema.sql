@@ -68,3 +68,5 @@ CREATE INDEX IF NOT EXISTS acts_today_day ON acts_today (day);
 -- Вес присланной игры (байт), его меряет страница при вставке ссылки.
 -- Больше 10 МБ — заявку не принимаем. На старой базе Worker добавит столбец сам.
 -- ALTER TABLE submissions ADD COLUMN weight INTEGER;
+-- Чем автор доказал, что игра его: github / code / moderator.
+-- ALTER TABLE submissions ADD COLUMN proof TEXT;

@@ -100,6 +100,8 @@ npx wrangler d1 execute plair-counts --remote --command "UPDATE users SET banned
 | `POST /share` `{id, visitor}` | репост, один в сутки с браузера на игру |
 | `POST /time` `{id, visitor, seconds}` | секунды в игре: до 60 за запрос, до 30 минут в сутки с браузера на игру |
 | `GET /config` | какие входы настроены |
+| `POST /verify` `{url}` | «это моя игра»: вход через GitHub (для name.github.io) или код `plair-…` на странице игры / в `plair.txt` |
+| `POST /submit` | заявка на игру; без доказательства авторства и тяжелее 10 МБ — отказ |
 | `POST /auth/google/token` `{credential}` | вход через Google: паспорт → пропуск |
 | `GET /auth/github?back=…` | вход через GitHub; возвращает на `back` с пропуском |
 | `GET /me` | кто вошёл |

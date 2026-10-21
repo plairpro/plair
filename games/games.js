@@ -554,6 +554,17 @@
           'and then it appears at the top of the feed.</li>' +
       '</ol>' +
 
+      '<h4>Show it&rsquo;s yours</h4>' +
+      '<p>Only the author can add a game. The form asks for one of two proofs:</p>' +
+      '<ul>' +
+        '<li><b>Sign in with GitHub</b> &mdash; if the game is on your own GitHub Pages ' +
+          '(<code>your-name.github.io/&hellip;</code>), signing in as <code>your-name</code> is enough.' +
+          (talkCfg && (talkCfg.providers || []).indexOf('github') === -1 ? ' <i>Opens soon.</i>' : '') + '</li>' +
+        '<li><b>Add a code to the game</b> &mdash; works on any hosting. The form gives you a line like ' +
+          '<code>&lt;meta name="plair-verify" content="plair-&hellip;"&gt;</code>; put it in your ' +
+          '<code>index.html</code> (or save the code as <code>plair.txt</code> next to it), publish, press Check.</li>' +
+      '</ul>' +
+
       '<h4>Limits</h4>' +
       '<ul>' +
         '<li><b>Size: up to ' + LIMIT_MB + ' MB.</b> We weigh the game as soon as you paste the link; ' +
@@ -877,7 +888,7 @@
   function submitSheet(opts) {
     opts = opts || {};
     picked = [];
-    sub = { url: '', cover: '', coverData: '', weight: null, weighing: null };
+    sub = { url: '', cover: '', coverData: '', weight: null, weighing: null, verified: false, code: '' };
     var s = sheet('<div class="g-sheet-top"><div><h3>Add a game</h3>' +
         '<p class="g-lede">Paste a link to your game. We fill in the rest &mdash; check it and send. ' +
         'It goes live after a quick look from us.</p></div>' +
@@ -911,6 +922,8 @@
         '<label class="g-field"><span>How to reach you &mdash; optional</span>' +
           '<input id="s-contact" type="text" maxlength="100" autocapitalize="none" ' +
           'placeholder="Email or Telegram, if we have a question"></label>' +
+        '<div class="g-own" id="s-own"><span class="g-own-h">Show it&rsquo;s yours</span>' +
+          '<div id="s-own-body"><p class="g-hint busy">Checking&hellip;</p></div></div>' +
         btn('s-go', 'Send for review') +
         '<p class="g-hint" id="f-msg"></p>' +
       '</div>');
@@ -949,7 +962,7 @@
     if (url === inspecting) return;
     inspecting = url;
     sub.url = url;
-    sub.weight = null; sub.weighing = null;
+    sub.weight = null; sub.weighing = null; sub.verified = false; sub.code = '';
     drawWeight(null);
     msg.className = 'g-hint busy';
     msg.textContent = 'Looking at the game…';
@@ -958,6 +971,7 @@
       $('s-more').hidden = false;
       var title = $('s-title'), blurb = $('s-blurb');
       if (pg.status !== 404) {
+        checkOwner(url);
         drawWeight('busy');
         sub.weighing = weighGame(url, LIMIT_BYTES).then(function (w) {
           if (inspecting !== url) return w;
@@ -1005,11 +1019,79 @@
     });
   }
 
+  /* Кнопка отправки живёт, только если игра не тяжелее предела и
+     автор показал, что она его. */
+  function syncGo() {
+    var go = $('s-go');
+    if (go) go.disabled = !!(sub && ((sub.weight && sub.weight.over) || !sub.verified));
+  }
+
+  /* «Это моя игра»: вход через GitHub (для name.github.io) или код в
+     самой игре. Сервер проверяет то же самое ещё раз при отправке. */
+  function checkOwner(url) {
+    var body = $('s-own-body');
+    if (!body || !COUNTS) return;
+    body.innerHTML = '<p class="g-hint busy">Checking&hellip;</p>';
+    Promise.all([api('/verify', { method: 'POST', body: { url: url } }), loadCfg()]).then(function (r) {
+      if (inspecting !== url) return;
+      var d = r[0];
+      // Сервер ещё старый, проверки не знает — не мешаем отправке, проверит модератор.
+      if (d.status === 404 && d.why === 'no such path') { sub.verified = true; $('s-own').hidden = true; syncGo(); return; }
+      if (!d.ok) throw new Error('verify');
+      sub.verified = !!d.verified; sub.code = d.code || '';
+      drawOwn(d, url);
+    }).catch(function () {
+      if (inspecting !== url || !$('s-own-body')) return;
+      $('s-own-body').innerHTML = '<p class="g-hint bad">Could not check right now. ' +
+        '<button type="button" class="g-link" data-own-check>Try again</button></p>';
+    });
+  }
+
+  function drawOwn(d, url) {
+    var body = $('s-own-body');
+    if (!body) return;
+    syncGo();
+    if (d.verified) {
+      body.innerHTML = '<p class="g-hint good">' + (d.how === 'github'
+        ? 'Confirmed: you are signed in with GitHub as @' + esc(d.login) + '.'
+        : d.how === 'moderator' ? 'You are a moderator — no proof needed.'
+        : 'Confirmed: the code is on the game page.') + '</p>';
+      return;
+    }
+    var gh = /\.github\.io$/i.test(new URL(url).hostname) &&
+      talkCfg && (talkCfg.providers || []).indexOf('github') !== -1;
+    var line = '<meta name="plair-verify" content="' + d.code + '">';
+    body.innerHTML =
+      (gh ? '<p class="g-hint">Game on your own GitHub Pages? Sign in with that GitHub account &mdash; that is all.</p>' +
+        '<button class="g-auth-btn g-own-gh" type="button" data-own-github>' + ICON_GITHUB + 'Sign in with GitHub</button>' +
+        '<p class="g-hint">Or add a code to the game instead:</p>'
+        : '<p class="g-hint">Add this line inside <code>&lt;head&gt;</code> of your game&rsquo;s <code>index.html</code>:</p>') +
+      '<div class="g-own-code"><code>' + esc(line) + '</code>' +
+        '<button type="button" class="g-link" data-own-copy>Copy</button></div>' +
+      '<p class="g-hint">' + (gh ? 'Put it inside <code>&lt;head&gt;</code> of <code>index.html</code>, or save' : 'Or save') +
+        ' a file <code>plair.txt</code> with <code>' + esc(d.code) + '</code> next to it. Publish, wait a minute, then ' +
+        '<button type="button" class="g-link" data-own-check>check again</button>.</p>';
+  }
+
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest && e.target.closest('[data-own-check],[data-own-copy],[data-own-github]');
+    if (!el || !sub) return;
+    if (el.hasAttribute('data-own-check')) { if (sub.url) checkOwner(sub.url); return; }
+    if (el.hasAttribute('data-own-copy')) {
+      copyText('<meta name="plair-verify" content="' + sub.code + '">')
+        .then(function () { toast('Copied'); }, function () {});
+      return;
+    }
+    // Вход через GitHub — и сразу обратно в форму с той же ссылкой.
+    var back = location.origin + '/?add=' + encodeURIComponent(sub.url);
+    location.assign(COUNTS + '/auth/github?back=' + encodeURIComponent(back));
+  });
+
   /* Строка про вес под ссылкой. Тяжелее предела — кнопка отправки гаснет. */
   function drawWeight(w) {
-    var el = $('s-weight'), go = $('s-go');
+    var el = $('s-weight');
     if (!el) return;
-    if (go) go.disabled = !!(w && w.over);
+    syncGo();
     if (!w) { el.hidden = true; return; }
     el.hidden = false;
     if (w === 'busy') { el.className = 'g-hint busy'; el.textContent = 'Weighing the game…'; return; }
@@ -1075,6 +1157,10 @@
       msg.className = 'g-hint bad'; msg.textContent = 'The game is over ' + LIMIT_MB + ' MB — make it lighter first.';
       return;
     }
+    if (!sub.verified) {
+      msg.className = 'g-hint bad'; msg.textContent = 'Show that the game is yours first — see just above.';
+      return;
+    }
     msg.className = 'g-hint busy'; msg.textContent = 'Sending…';
     api('/submit', { method: 'POST', body: {
       weight: sub.weight && !sub.weight.unknown ? sub.weight.bytes : null,
@@ -1084,8 +1170,10 @@
     } }).then(function (d) {
       if (!d.ok) {
         go.disabled = false;
+        if (d.why === 'verify') { sub.verified = false; drawOwn({ verified: false, code: d.code || sub.code }, url); }
         msg.className = 'g-hint bad';
         msg.textContent = d.why === 'heavy' ? 'The game is over ' + LIMIT_MB + ' MB — make it lighter first.'
+          : d.why === 'verify' ? 'We could not find the code on the game page yet. Publish it and check again.'
           : d.why === 'day' ? 'That is a lot of games for one day — try again tomorrow.'
           : d.why === 'busy' ? 'The review queue is full right now. Try again later.'
           : 'That did not go through. Check the link and the title.';
@@ -1192,6 +1280,8 @@
           (it.blurb ? '<p>' + esc(it.blurb) + '</p>' : '') +
           '<p class="g-rv-meta"><a href="' + esc(it.url) + '" target="_blank" rel="noopener">' + esc(it.url.replace(/^https:\/\//, '')) + '</a>' +
             ' &middot; ' + (it.weight ? mb(it.weight) : 'size unknown') +
+            ' &middot; ' + (it.proof === 'github' ? 'owner: GitHub' : it.proof === 'code' ? 'owner: code on page'
+              : it.proof === 'moderator' ? 'added by a moderator' : 'owner not checked') +
             (it.contact ? ' &middot; ' + esc(it.contact) : '') +
             (it.tags.length ? ' &middot; ' + esc(it.tags.join(', ')) : '') + '</p>' +
           '<div class="g-rv-acts">' +
@@ -2342,6 +2432,9 @@
       if (START.get('review') === '1') {
         if (meUser && meUser.admin) reviewSheet(); else if (!meUser) accountSheet();
       }
+      // Вернулись из входа через GitHub посреди заявки — открываем её снова.
+      var addUrl = START.get('add');
+      if (addUrl && /^https:\/\//.test(addUrl)) submitSheet({ url: addUrl });
     });
   });
   fetchGames()

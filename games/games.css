@@ -292,6 +292,15 @@
 .g-limits b{color:var(--ink);font-weight:600}
 .g-back-to{margin:10px 0 0}
 #s-weight b{font-weight:600}
+.g-own{margin-top:18px;padding:12px 14px;border:1px solid var(--line-2);border-radius:12px}
+.g-own-h{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;color:var(--muted)}
+.g-own .g-hint:first-child{margin-top:6px}
+.g-own-gh{margin-top:8px;width:100%}
+.g-own-code{display:flex;align-items:center;gap:10px;margin-top:8px;padding:8px 10px;border-radius:8px;
+  background:var(--surface);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+.g-own-code code{flex:1;min-width:0;overflow-wrap:anywhere;color:var(--ink)}
+.g-own-code .g-link{flex:none;font-family:var(--body)}
+.g-own code{font-size:11.5px}
 .g-doc h4{font-family:var(--display);font-weight:600;font-size:14px;letter-spacing:-.01em;
   margin:22px 0 8px;color:var(--ink)}
 .g-doc h4:first-child{margin-top:8px}

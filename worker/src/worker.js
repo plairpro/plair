@@ -639,6 +639,8 @@ function install(env) {
       .then(() => env.DB.prepare('ALTER TABLE games ADD COLUMN seconds INTEGER NOT NULL DEFAULT 0').run().catch(() => {}))
       // Вес присланной игры в байтах — тоже появился позже.
       .then(() => env.DB.prepare('ALTER TABLE submissions ADD COLUMN weight INTEGER').run().catch(() => {}))
+      // Чем автор доказал, что игра его: github / code / moderator.
+      .then(() => env.DB.prepare('ALTER TABLE submissions ADD COLUMN proof TEXT').run().catch(() => {}))
       .catch((e) => { installed = null; throw e; });
   }
   return installed;
@@ -662,6 +664,52 @@ function cleanUrl(v) {
 
 function slugify(v) {
   return String(v || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40).replace(/-+$/, '');
+}
+
+/* ── «это моя игра» ───────────────────────────────────── */
+/* Прислать можно только свою игру. Два способа доказать:
+   1) вход через GitHub тем аккаунтом, на чьём name.github.io лежит игра;
+   2) код в самой игре — строка <meta name="plair-verify" content="…">
+      в index.html или файл plair.txt с кодом рядом с ним. Код выводится
+      из адреса папки игры и нашего секрета: для каждой игры свой, а
+      положить его туда может только тот, кто правит сайт. */
+function gameDir(url) {
+  const u = new URL(url);
+  u.search = ''; u.hash = '';
+  u.pathname = u.pathname.replace(/[^/]*$/, '');
+  return u.toString();
+}
+async function ownerCode(env, url) {
+  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', await key(env), enc.encode('verify|' + gameDir(url))));
+  return 'plair-' + Array.from(sig.slice(0, 6), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+async function pageHas(target, code) {
+  try {
+    const u = new URL(target);
+    u.searchParams.set('plair-check', String(Date.now()));   // мимо кэша GitHub Pages
+    const r = await fetch(u.toString(), { redirect: 'follow', cf: { cacheTtl: 0 },
+      headers: { 'User-Agent': 'PLAIR-verify (+https://plair.pro)' } });
+    if (!r.ok) return false;
+    if (Number(r.headers.get('content-length')) > 3000000) return false;
+    return (await r.text()).slice(0, 3000000).indexOf(code) !== -1;
+  } catch (e) { return false; }
+}
+async function proveOwner(env, url, me) {
+  const code = await ownerCode(env, url);
+  if (me && me.admin) return { ok: true, how: 'moderator', code };
+  const host = new URL(url).hostname.toLowerCase();
+  if (me && /^github:/.test(me.id) && me.login && host === String(me.login).toLowerCase() + '.github.io') {
+    return { ok: true, how: 'github', code, login: me.login };
+  }
+  if (await pageHas(url, code) || await pageHas(gameDir(url) + 'plair.txt', code)) return { ok: true, how: 'code', code };
+  return { ok: false, code };
+}
+
+async function verifyGame(env, origin, me, body) {
+  const url = cleanUrl(body && body.url);
+  if (!url) return reply(env, origin, { ok: false, why: 'url' }, { status: 400 });
+  const p = await proveOwner(env, url, me);
+  return reply(env, origin, { ok: true, verified: p.ok, how: p.how || null, code: p.code, login: p.login || null });
 }
 
 function author(url) {
@@ -698,6 +746,8 @@ async function submitGame(env, origin, request, ctx, me, body) {
   const weight = Number.isFinite(Number(body.weight)) && Number(body.weight) > 0 ? Math.round(Number(body.weight)) : null;
   if (weight && weight > MAX_WEIGHT) return reply(env, origin, { ok: false, why: 'heavy', weight, max: MAX_WEIGHT }, { status: 413 });
   const a = author(url);
+  const proof = await proveOwner(env, url, me);
+  if (!proof.ok) return reply(env, origin, { ok: false, why: 'verify', code: proof.code }, { status: 403 });
 
   // Адрес отправителя храним только отпечатком — для лимита заявок.
   const ip = (await sha256hex((request.headers.get('CF-Connecting-IP') || '') + '|' + await secret(env))).slice(0, 24);
@@ -710,13 +760,14 @@ async function submitGame(env, origin, request, ctx, me, body) {
   if (queue && queue.n >= MAX_PENDING) return reply(env, origin, { ok: false, why: 'busy' }, { status: 429 });
 
   await env.DB.prepare(
-    'INSERT INTO submissions (url, title, blurb, tags, cover, cover_data, by, by_url, contact, user, ip, created, weight) ' +
-    'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    'INSERT INTO submissions (url, title, blurb, tags, cover, cover_data, by, by_url, contact, user, ip, created, weight, proof) ' +
+    'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
   ).bind(url, title, blurb || null, JSON.stringify(tags), cover, coverData, a.by, a.byUrl, contact,
-         me ? me.id : null, ip, t, weight).run();
+         me ? me.id : null, ip, t, weight, proof.how).run();
 
   ctx.waitUntil(notifyText(env, 'New game for review: ' + title + '\n' + url +
     '\nSize: ' + (weight ? (weight / 1048576).toFixed(1) + ' MB' : 'unknown') +
+    '\nOwner proof: ' + (proof.how === 'github' ? 'GitHub @' + proof.login : proof.how) +
     (contact ? '\nContact: ' + contact : '') + '\n\nReview: https://plair.pro/?review=1'));
   return reply(env, origin, { ok: true });
 }
@@ -751,7 +802,7 @@ async function coverImage(env, game) {
 async function listSubmissions(env, origin, me) {
   if (!me || !me.admin) return reply(env, origin, { ok: false, why: 'admin' }, { status: 403 });
   const { results } = await env.DB.prepare(
-    "SELECT id, url, title, blurb, tags, cover, cover_data, by, by_url, contact, created, weight FROM submissions " +
+    "SELECT id, url, title, blurb, tags, cover, cover_data, by, by_url, contact, created, weight, proof FROM submissions " +
     "WHERE status = 'pending' ORDER BY created ASC LIMIT 20"
   ).all();
   const total = await env.DB.prepare("SELECT COUNT(*) AS n FROM submissions WHERE status = 'pending'").first();
@@ -760,7 +811,7 @@ async function listSubmissions(env, origin, me) {
     items: (results || []).map((r) => ({
       id: r.id, url: r.url, title: r.title, blurb: r.blurb || '', tags: JSON.parse(r.tags || '[]'),
       cover: r.cover_data || r.cover || '', by: r.by, byUrl: r.by_url, contact: r.contact || '', created: r.created,
-      weight: r.weight || null
+      weight: r.weight || null, proof: r.proof || null
     }))
   });
 }
@@ -845,6 +896,11 @@ export default {
         let body = null;
         try { body = await request.json(); } catch (e) { body = null; }
         return submitGame(env, origin, request, ctx, await who(env, request), body);
+      }
+      if (path === '/verify' && m === 'POST') {
+        let body = null;
+        try { body = await request.json(); } catch (e) { body = null; }
+        return verifyGame(env, origin, await who(env, request), body);
       }
       if (path === '/games' && m === 'GET') return approvedGames(env, origin, url);
       const cov = path.match(/^\/cover\/([a-z0-9-]{1,40})$/);
