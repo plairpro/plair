@@ -338,7 +338,19 @@
      растяжении браузер сам сглаживает её в мягкое пятно. Готовую
      картинку помним, вторая карточка с той же обложкой берёт её. */
   var softCache = {};
-  function softImage(src, w) {
+  /* Насыщенность и яркость тоже запекаем в саму картинку (формулы те же,
+     что у CSS saturate()/brightness()) — тогда фильтров нет вовсе. */
+  function tone(ctx, w, h, sat, br) {
+    var d = ctx.getImageData(0, 0, w, h), p = d.data;
+    for (var i = 0; i < p.length; i += 4) {
+      var r = p[i], g = p[i + 1], b = p[i + 2];
+      p[i] = br * ((0.213 + 0.787 * sat) * r + (0.715 - 0.715 * sat) * g + (0.072 - 0.072 * sat) * b);
+      p[i + 1] = br * ((0.213 - 0.213 * sat) * r + (0.715 + 0.285 * sat) * g + (0.072 - 0.072 * sat) * b);
+      p[i + 2] = br * ((0.213 - 0.213 * sat) * r + (0.715 - 0.715 * sat) * g + (0.072 + 0.928 * sat) * b);
+    }
+    ctx.putImageData(d, 0, 0);
+  }
+  function softImage(src, w, sat, br) {
     if (!softCache[src]) softCache[src] = new Promise(function (ok, no) {
       var im = new Image();
       if (!/^\//.test(src)) im.crossOrigin = 'anonymous';
@@ -347,6 +359,7 @@
           var h = Math.round(w * im.naturalHeight / Math.max(1, im.naturalWidth));
           var a = document.createElement('canvas'); a.width = w; a.height = h;
           var x = a.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(im, 0, 0, w, h);
+          tone(x, w, h, sat, br);
           var b = document.createElement('canvas'); b.width = w * 8; b.height = h * 8;
           var y = b.getContext('2d'); y.imageSmoothingQuality = 'high'; y.drawImage(a, 0, 0, b.width, b.height);
           ok(b.toDataURL('image/jpeg', 0.8));
@@ -362,8 +375,10 @@
       var src = el.getAttribute('src');
       if (!src || el.dataset.soft) return;
       el.dataset.soft = '1';
-      softImage(src + '#' + (el.classList.contains('g-back') ? 'b' : 'f'), el.classList.contains('g-back') ? 10 : 14)
-        .then(function (url) { el.src = url; el.classList.add('is-soft'); }, function () {});
+      var back = el.classList.contains('g-back');
+      softImage(src + '#' + (back ? 'b' : 'f'), back ? 10 : 14, back ? 0.45 : 0.6, back ? 0.3 : 0.45)
+        .then(function (url) { el.src = url; el.classList.add('is-soft'); },
+              function () { el.classList.add('is-live'); });
     });
   }
 
@@ -462,6 +477,10 @@
 
   function current() {
     var deck = $('feed'), all = slides(), best = 0, min = Infinity;
+    // Слайды одной высоты — номер считается делением, без обхода всех.
+    if (all.length && all[0].offsetHeight) {
+      return Math.max(0, Math.min(all.length - 1, Math.round((deck.scrollTop - all[0].offsetTop) / all[0].offsetHeight)));
+    }
     all.forEach(function (s, i) {
       var d = Math.abs(s.offsetTop - deck.scrollTop);
       if (d < min) { min = d; best = i; }
@@ -480,7 +499,7 @@
 
   var open = null;
 
-  function sheet(html) {
+  function sheet(html, focusSel) {
     shut();
     var s = document.createElement('div');
     s.className = 'g-scrim';
@@ -489,7 +508,7 @@
     document.body.appendChild(s);
     document.body.style.overflow = 'hidden';
     open = s;
-    var f = s.querySelector('input, button');
+    var f = s.querySelector(focusSel || 'input, button');
     if (f) f.focus();
     return s;
   }
@@ -511,13 +530,22 @@
 
   /* ── инструкция ──────────────────────────────────────── */
 
-  function howSheet() {
-    sheet('<div class="g-sheet-top"><div><h3>How to add a game</h3>' +
-      '<p class="g-lede">Paste a link. That is the whole job &mdash; we fill in the rest.</p></div>' +
+  /* «i» — как всё устроено: сначала для авторов (как добавить игру,
+     пределы веса и загрузки, обложка), потом — как упорядочена лента.
+     Окно «+» ссылается сюда и умеет вернуться к начатой заявке. */
+  var LIMIT_MB = 10, LIMIT_GOOD_MB = 5, LIMIT_SEC = 10;
+  var LIMIT_BYTES = LIMIT_MB * 1024 * 1024;
+  var draftUrl = '';   // ссылка из «+», пока человек читает правила
+
+  function howSheet(opts) {
+    opts = opts || {};
+    sheet('<div class="g-sheet-top"><div><h3>How it works</h3>' +
+      '<p class="g-lede">Small web games by their makers. Tap a cover and play &mdash; nothing to install.</p></div>' +
       '<span class="g-sp"></span>' + X + '</div>' +
+      (opts.back ? '<p class="g-back-to"><button type="button" class="g-link" data-add-back>&larr; Back to your game</button></p>' : '') +
       '<div class="g-doc">' +
 
-      '<h4>Three steps</h4>' +
+      '<h4>Add your game</h4>' +
       '<ol>' +
         '<li>Press the green <b>+</b> at the top and paste the link to your game ' +
           '(for example <code>name.github.io/my-game</code>).</li>' +
@@ -526,16 +554,27 @@
           'and then it appears at the top of the feed.</li>' +
       '</ol>' +
 
-      '<h4>What makes a good entry</h4>' +
+      '<h4>Limits</h4>' +
       '<ul>' +
-        '<li>It <b>runs in a browser</b> &mdash; no downloads, installers or store links.</li>' +
-        '<li>A <b>cover</b>. Put <code>cover.png</code> (or .jpg/.webp) next to your game&rsquo;s ' +
-          '<code>index.html</code> and it is picked up by itself, or upload a picture in the form. ' +
-          'Best: upright 9:16, shot <b>inside</b> the game rather than on the title screen.</li>' +
-        '<li><b>Keep it light.</b> Somebody will open it on a phone, on mobile data.</li>' +
-        '<li><b>Landscape-only game?</b> Say so in the one-line description.</li>' +
-        '<li>Some games refuse to be embedded. Those open in a separate tab instead &mdash; that is fine.</li>' +
+        '<li><b>Size: up to ' + LIMIT_MB + ' MB.</b> We weigh the game as soon as you paste the link; ' +
+          'a heavier one cannot be sent. Aim for under ' + LIMIT_GOOD_MB + ' MB &mdash; people open the feed ' +
+          'on a phone, on mobile data.</li>' +
+        '<li><b>Loading: playable within ' + LIMIT_SEC + ' seconds</b> on a phone on 4G. ' +
+          'A long loading screen is a reason to send a game back.</li>' +
+        '<li><b>Runs in a browser</b> over https &mdash; no downloads, installers, store links ' +
+          'or sign-up before the first round.</li>' +
+        '<li><b>Works on a phone</b> with touch. Landscape-only or keyboard-only? Say so in the one-line description.</li>' +
+        '<li><b>Yours to publish</b> &mdash; your own game, or one you have the rights to.</li>' +
       '</ul>' +
+      '<p class="g-hint">The size counts every file the game refers to: code, pictures, sounds, models. ' +
+        'To shrink it, save pictures as WebP, sounds as short OGG or MP3, and drop files the game does not use.</p>' +
+
+      '<h4>Cover</h4>' +
+      '<p>Put <code>cover.png</code> (or .jpg/.webp) next to your game&rsquo;s <code>index.html</code> and it is ' +
+        'picked up by itself, or upload a picture in the form. Best: upright 9:16, shot <b>inside</b> the game ' +
+        'rather than on the title screen.</p>' +
+      '<p class="g-hint">Some games refuse to be embedded. Those open in a separate tab instead &mdash; that is fine.</p>' +
+      (opts.back ? '' : '<p><button type="button" class="g-link" data-add-open>Add a game</button></p>') +
 
       '<h4>How the feed is ordered</h4>' +
       '<p><b>New</b> is the default: whatever was added last comes first. ' +
@@ -555,6 +594,94 @@
         '<a class="g-privacy" href="/privacy/">Privacy</a></p>' +
 
       '</div>');
+  }
+
+  /* Вес игры: сколько она тянет из сети. Читаем страницу, её скрипты и
+     стили, находим в них пути к файлам (модели, звуки, картинки, сборки
+     Unity) и спрашиваем у сервера размер каждого. Размер — из
+     Content-Length, то есть уже сжатый, как он реально идёт по сети.
+     Считаем всё, на что игра ссылается, даже если часть она грузит по
+     ходу: так тяжёлую игру не спрятать за лёгкой первой страницей. */
+  var ASSET_RE = /["'`(]((?:https?:\/\/[^"'`()\s]+?|\.{0,2}\/?[\w\-.%@~+]+(?:\/[\w\-.%@~+]+)*)\.(?:m?js|css|wasm|data|unityweb|glb|gltf|bin|fbx|obj|png|jpe?g|webp|avif|gif|svg|mp3|ogg|oga|wav|m4a|aac|mp4|webm|json|ttf|otf|woff2?|atlas|fnt|ktx2|basis|hdr|exr|pck|zip)(?:\.(?:br|gz|unityweb))?)(?:[?#][^"'`()\s]*)?["'`)]/gi;
+  var TEXT_EXT = /\.(?:m?js|css|html?|json)(?:$|[?#])/i;
+  function weighGame(pageUrl, limitBytes) {
+    var host = new URL(pageUrl).host, seen = {}, queue = [], total = 0, files = 0, started = Date.now();
+    var MAX_FILES = 150, MAX_MS = 25000;
+    function add(u, base, fromTag) {
+      var abs;
+      try { abs = new URL(u, base); } catch (e) { return; }
+      if (abs.protocol !== 'https:') return;
+      if (!fromTag && abs.host !== host) return;   // чужие адреса внутри кода — не вес игры
+      abs.hash = '';
+      if (seen[abs.href]) return;
+      seen[abs.href] = 1;
+      queue.push(abs.href);
+    }
+    function scan(text, base) {
+      // Шрифт в стиле обычно дан в нескольких форматах, браузер берёт один — woff2.
+      var woff2 = /\.woff2/i.test(text), m;
+      ASSET_RE.lastIndex = 0;
+      while ((m = ASSET_RE.exec(text))) {
+        if (woff2 && /\.(?:woff|ttf|otf)$/i.test(m[1])) continue;
+        add(m[1], base, false);
+      }
+    }
+    function one(u) {
+      var text = u === pageUrl || TEXT_EXT.test(u);
+      return fetch(u, { method: text ? 'GET' : 'HEAD', cache: 'no-cache', credentials: 'omit' }).then(function (r) {
+        if (!r.ok) return;
+        var n = Number(r.headers.get('content-length'));
+        if (!text) {
+          if (n > 0) { total += n; files++; return; }
+          return fetch(u, { cache: 'no-cache', credentials: 'omit' })
+            .then(function (g) { return g.arrayBuffer(); })
+            .then(function (b) { total += b.byteLength; files++; });
+        }
+        return r.text().then(function (t) {
+          total += n > 0 ? n : new Blob([t]).size; files++;
+          if (u === pageUrl || /html/i.test(r.headers.get('content-type') || '')) {
+            var d = new DOMParser().parseFromString(t, 'text/html');
+            var b = d.querySelector('base[href]');
+            var base = b ? new URL(b.getAttribute('href'), u).href : u;
+            [].forEach.call(d.querySelectorAll('script[src]'), function (e) { add(e.getAttribute('src'), base, true); });
+            [].forEach.call(d.querySelectorAll('link[href]'), function (e) {
+              if (/stylesheet|modulepreload|preload/i.test(e.getAttribute('rel') || '')) add(e.getAttribute('href'), base, true);
+            });
+            [].forEach.call(d.querySelectorAll('img[src],audio[src],video[src],source[src]'), function (e) {
+              add(e.getAttribute('src'), base, true);
+            });
+            [].forEach.call(d.querySelectorAll('script:not([src]),style'), function (e) { scan(e.textContent, base); });
+          } else {
+            // Путь из стиля браузер считает от самого стиля, из скрипта — от страницы.
+            scan(t, /\.css(?:$|[?#])/i.test(u) ? u : pageUrl);
+          }
+        });
+      }).catch(function () {});
+    }
+    seen[pageUrl] = 1; queue.push(pageUrl);
+    return new Promise(function (done) {
+      var running = 0, i = 1, finished = false;
+      function end(r) { if (!finished) { finished = true; done(r); } }
+      function pump() {
+        var over = limitBytes && total > limitBytes;
+        if (over || Date.now() - started > MAX_MS || i >= MAX_FILES) {
+          if (!running) end({ bytes: total, files: files, over: !!over, partial: !over });
+          return;
+        }
+        while (running < 6 && i < queue.length && i < MAX_FILES) {
+          running++;
+          one(queue[i++]).then(function () { running--; pump(); });
+        }
+        if (!running && i >= queue.length) end({ bytes: total, files: files, over: false, partial: false });
+      }
+      // Страница не читается (сайт закрыт для других сайтов) — веса не знаем.
+      one(pageUrl).then(function () { if (!files) end({ bytes: 0, files: 0, unknown: true }); else pump(); });
+    });
+  }
+
+  function mb(bytes) {
+    var v = bytes / 1048576;
+    return (v < 0.1 ? '0.1' : v < 10 ? v.toFixed(1) : String(Math.round(v))) + ' MB';
   }
 
   /* ── связаться ───────────────────────────────────────── */
@@ -681,6 +808,12 @@
 
   document.addEventListener('click', function (ev) {
     if (ev.target.closest && ev.target.closest('[data-contact]')) openContact();
+    if (ev.target.closest && ev.target.closest('[data-how-add]')) {
+      draftUrl = ($('s-url') && $('s-url').value) || draftUrl;
+      howSheet({ back: true });
+    }
+    if (ev.target.closest && ev.target.closest('[data-add-back]')) submitSheet({ url: draftUrl });
+    if (ev.target.closest && ev.target.closest('[data-add-open]')) submitSheet();
   });
 
   /* ── добавить игру ───────────────────────────────────── */
@@ -741,9 +874,10 @@
     return t.slice(0, 40);
   }
 
-  function submitSheet() {
+  function submitSheet(opts) {
+    opts = opts || {};
     picked = [];
-    sub = { url: '', cover: '', coverData: '' };
+    sub = { url: '', cover: '', coverData: '', weight: null, weighing: null };
     var s = sheet('<div class="g-sheet-top"><div><h3>Add a game</h3>' +
         '<p class="g-lede">Paste a link to your game. We fill in the rest &mdash; check it and send. ' +
         'It goes live after a quick look from us.</p></div>' +
@@ -752,6 +886,10 @@
         '<input id="s-url" type="url" inputmode="url" autocapitalize="none" autocorrect="off" spellcheck="false" ' +
         'placeholder="https://name.github.io/your-game/"></label>' +
       '<p class="g-hint" id="s-url-msg">Any web game that opens in a browser. A GitHub repository link works too.</p>' +
+      '<p class="g-hint" id="s-weight" hidden></p>' +
+      '<p class="g-hint g-limits">Up to <b>' + LIMIT_MB + ' MB</b> and playable within <b>' + LIMIT_SEC +
+        ' seconds</b> on a phone. <button type="button" class="g-link" data-how-add>How to add a game &mdash; ' +
+        'rules and tips</button></p>' +
       '<div class="g-sub-more" id="s-more" hidden>' +
         '<div class="g-cov">' +
           '<div class="g-cov-img" id="s-cov" aria-hidden="true"></div>' +
@@ -778,6 +916,7 @@
       '</div>');
 
     var input = s.querySelector('#s-url'), t;
+    if (opts.url) { input.value = opts.url; inspecting = ''; setTimeout(inspectGame, 0); }
     input.addEventListener('input', function () { clearTimeout(t); t = setTimeout(inspectGame, 450); });
     input.addEventListener('paste', function () { clearTimeout(t); t = setTimeout(inspectGame, 60); });
     s.querySelector('#s-file').addEventListener('change', function () {
@@ -810,12 +949,23 @@
     if (url === inspecting) return;
     inspecting = url;
     sub.url = url;
+    sub.weight = null; sub.weighing = null;
+    drawWeight(null);
     msg.className = 'g-hint busy';
     msg.textContent = 'Looking at the game…';
     readPage(url).then(function (pg) {
       if (inspecting !== url || !$('s-more')) return;
       $('s-more').hidden = false;
       var title = $('s-title'), blurb = $('s-blurb');
+      if (pg.status !== 404) {
+        drawWeight('busy');
+        sub.weighing = weighGame(url, LIMIT_BYTES).then(function (w) {
+          if (inspecting !== url) return w;
+          sub.weight = w;
+          drawWeight(w);
+          return w;
+        });
+      }
       if (pg.status === 404) {
         msg.className = 'g-hint bad';
         msg.textContent = 'Nothing opens at ' + url + '. Check the link — for GitHub, Pages has to be on.';
@@ -855,6 +1005,31 @@
     });
   }
 
+  /* Строка про вес под ссылкой. Тяжелее предела — кнопка отправки гаснет. */
+  function drawWeight(w) {
+    var el = $('s-weight'), go = $('s-go');
+    if (!el) return;
+    if (go) go.disabled = !!(w && w.over);
+    if (!w) { el.hidden = true; return; }
+    el.hidden = false;
+    if (w === 'busy') { el.className = 'g-hint busy'; el.textContent = 'Weighing the game…'; return; }
+    if (w.unknown) {
+      el.className = 'g-hint';
+      el.textContent = 'This site does not let us weigh the game from here — we will check its size by hand.';
+    } else if (w.over) {
+      el.className = 'g-hint bad';
+      el.innerHTML = '<b>Over ' + LIMIT_MB + ' MB</b> (counted at least ' + mb(w.bytes) + '), so it cannot be sent. ' +
+        'Make it lighter &mdash; pictures in WebP, shorter sounds, no unused files &mdash; and paste the link again.';
+    } else if (w.bytes > LIMIT_GOOD_MB * 1048576) {
+      el.className = 'g-hint';
+      el.textContent = 'Size: about ' + mb(w.bytes) + (w.partial ? ' or more' : '') +
+        '. Within the ' + LIMIT_MB + ' MB limit, but a lighter game opens faster on a phone.';
+    } else {
+      el.className = 'g-hint good';
+      el.textContent = 'Size: about ' + mb(w.bytes) + (w.partial ? ' or more' : '') + ' — fine.';
+    }
+  }
+
   /* Своя картинка: ужимаем прямо в браузере до 720×1280 (9:16, по
      центру), чтобы на сервер уходило ~100 КБ, а не фото на 8 МБ. */
   function ownCover(file) {
@@ -890,8 +1065,19 @@
     if (!title) { msg.className = 'g-hint bad'; msg.textContent = 'Give the game a title.'; $('s-title').focus(); return; }
     if (!COUNTS) { msg.className = 'g-hint bad'; msg.textContent = 'Sending is not set up yet.'; return; }
     go.disabled = true;
+    // Вес ещё считается — дожидаемся: без него заявку не шлём.
+    if (sub.weighing && !sub.weight) {
+      msg.className = 'g-hint busy'; msg.textContent = 'Weighing the game…';
+      sub.weighing.then(function () { go.disabled = false; msg.textContent = ''; sendGame(); });
+      return;
+    }
+    if (sub.weight && sub.weight.over) {
+      msg.className = 'g-hint bad'; msg.textContent = 'The game is over ' + LIMIT_MB + ' MB — make it lighter first.';
+      return;
+    }
     msg.className = 'g-hint busy'; msg.textContent = 'Sending…';
     api('/submit', { method: 'POST', body: {
+      weight: sub.weight && !sub.weight.unknown ? sub.weight.bytes : null,
       url: url, title: title, blurb: $('s-blurb').value.trim(), tags: picked.slice(),
       cover: sub.coverData ? '' : sub.cover, coverData: sub.coverData || '',
       contact: $('s-contact').value.trim()
@@ -899,7 +1085,8 @@
       if (!d.ok) {
         go.disabled = false;
         msg.className = 'g-hint bad';
-        msg.textContent = d.why === 'day' ? 'That is a lot of games for one day — try again tomorrow.'
+        msg.textContent = d.why === 'heavy' ? 'The game is over ' + LIMIT_MB + ' MB — make it lighter first.'
+          : d.why === 'day' ? 'That is a lot of games for one day — try again tomorrow.'
           : d.why === 'busy' ? 'The review queue is full right now. Try again later.'
           : 'That did not go through. Check the link and the title.';
         return;
@@ -1004,6 +1191,7 @@
         '<div class="g-rv-body"><h4>' + esc(it.title) + '</h4>' +
           (it.blurb ? '<p>' + esc(it.blurb) + '</p>' : '') +
           '<p class="g-rv-meta"><a href="' + esc(it.url) + '" target="_blank" rel="noopener">' + esc(it.url.replace(/^https:\/\//, '')) + '</a>' +
+            ' &middot; ' + (it.weight ? mb(it.weight) : 'size unknown') +
             (it.contact ? ' &middot; ' + esc(it.contact) : '') +
             (it.tags.length ? ' &middot; ' + esc(it.tags.join(', ')) : '') + '</p>' +
           '<div class="g-rv-acts">' +
@@ -1973,7 +2161,8 @@
       return;
     }
 
-    if (el.id === 'how' || el.id === 'empty-how') { howSheet(); return; }
+    if (el.id === 'how') { howSheet(); return; }
+    if (el.id === 'empty-how') { howSheet(); return; }
     if (el.id === 'who') { accountSheet(); return; }
     if (el.id === 'submit-open' || el.id === 'empty-go') { submitSheet(); return; }
   });
@@ -2007,14 +2196,24 @@
   }
 
   /* Подсказка «свайпни» уходит, как только лентой воспользовались. */
+  /* Работа на прокрутке — не чаще раза за кадр: iPad шлёт событие
+     scroll до 120 раз в секунду. */
+  var scrollQueued = false;
   $('feed').addEventListener('scroll', function () {
-    if (this.scrollTop > 24) this.classList.add('is-moved');
+    if (scrollQueued) return;
+    scrollQueued = true;
+    requestAnimationFrame(onFeedScroll);
+  }, { passive: true });
+  function onFeedScroll() {
+    scrollQueued = false;
+    var deck = $('feed');
+    if (deck.scrollTop > 24) deck.classList.add('is-moved');
     /* В ленте звучать нечему. Если проигрыватель закрыт, а кадр игры
        почему-то жив, — сносим: листать ленту под чужую музыку нельзя. */
     if (!player) killFrames(document);
     closeShares();
     warm();
-  }, { passive: true });
+  }
 
   addEventListener('popstate', function () { if (player) quit(); });
 

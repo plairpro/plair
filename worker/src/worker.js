@@ -637,6 +637,8 @@ function install(env) {
       // Репосты и время в игре появились позже — тоже добавляем при надобности.
       .then(() => env.DB.prepare('ALTER TABLE games ADD COLUMN shares INTEGER NOT NULL DEFAULT 0').run().catch(() => {}))
       .then(() => env.DB.prepare('ALTER TABLE games ADD COLUMN seconds INTEGER NOT NULL DEFAULT 0').run().catch(() => {}))
+      // Вес присланной игры в байтах — тоже появился позже.
+      .then(() => env.DB.prepare('ALTER TABLE submissions ADD COLUMN weight INTEGER').run().catch(() => {}))
       .catch((e) => { installed = null; throw e; });
   }
   return installed;
@@ -647,6 +649,7 @@ function install(env) {
 const SUBMITS_A_DAY = 5;        // заявок с одного адреса в сутки
 const MAX_PENDING = 300;        // больше в очереди не держим
 const MAX_COVER = 460000;       // символов в обложке data:… (~340 КБ картинки)
+const MAX_WEIGHT = 10 * 1024 * 1024;  // байт: тяжелее игру не принимаем (вес меряет страница)
 
 function cleanUrl(v) {
   try {
@@ -690,6 +693,10 @@ async function submitGame(env, origin, request, ctx, me, body) {
   const coverData = typeof body.coverData === 'string' && body.coverData.length <= MAX_COVER &&
     /^data:image\/(webp|jpeg|png);base64,[A-Za-z0-9+\/=]+$/.test(body.coverData) ? body.coverData : null;
   const contact = cleanName(body.contact).slice(0, 100) || null;
+  // Вес игры меряет страница при вставке ссылки. Тяжелее предела — сразу
+  // отказ; если измерить не вышло (сайт закрыт), решает модератор.
+  const weight = Number.isFinite(Number(body.weight)) && Number(body.weight) > 0 ? Math.round(Number(body.weight)) : null;
+  if (weight && weight > MAX_WEIGHT) return reply(env, origin, { ok: false, why: 'heavy', weight, max: MAX_WEIGHT }, { status: 413 });
   const a = author(url);
 
   // Адрес отправителя храним только отпечатком — для лимита заявок.
@@ -703,12 +710,13 @@ async function submitGame(env, origin, request, ctx, me, body) {
   if (queue && queue.n >= MAX_PENDING) return reply(env, origin, { ok: false, why: 'busy' }, { status: 429 });
 
   await env.DB.prepare(
-    'INSERT INTO submissions (url, title, blurb, tags, cover, cover_data, by, by_url, contact, user, ip, created) ' +
-    'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    'INSERT INTO submissions (url, title, blurb, tags, cover, cover_data, by, by_url, contact, user, ip, created, weight) ' +
+    'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
   ).bind(url, title, blurb || null, JSON.stringify(tags), cover, coverData, a.by, a.byUrl, contact,
-         me ? me.id : null, ip, t).run();
+         me ? me.id : null, ip, t, weight).run();
 
   ctx.waitUntil(notifyText(env, 'New game for review: ' + title + '\n' + url +
+    '\nSize: ' + (weight ? (weight / 1048576).toFixed(1) + ' MB' : 'unknown') +
     (contact ? '\nContact: ' + contact : '') + '\n\nReview: https://plair.pro/?review=1'));
   return reply(env, origin, { ok: true });
 }
@@ -743,7 +751,7 @@ async function coverImage(env, game) {
 async function listSubmissions(env, origin, me) {
   if (!me || !me.admin) return reply(env, origin, { ok: false, why: 'admin' }, { status: 403 });
   const { results } = await env.DB.prepare(
-    "SELECT id, url, title, blurb, tags, cover, cover_data, by, by_url, contact, created FROM submissions " +
+    "SELECT id, url, title, blurb, tags, cover, cover_data, by, by_url, contact, created, weight FROM submissions " +
     "WHERE status = 'pending' ORDER BY created ASC LIMIT 20"
   ).all();
   const total = await env.DB.prepare("SELECT COUNT(*) AS n FROM submissions WHERE status = 'pending'").first();
@@ -751,7 +759,8 @@ async function listSubmissions(env, origin, me) {
     ok: true, total: (total && total.n) || 0,
     items: (results || []).map((r) => ({
       id: r.id, url: r.url, title: r.title, blurb: r.blurb || '', tags: JSON.parse(r.tags || '[]'),
-      cover: r.cover_data || r.cover || '', by: r.by, byUrl: r.by_url, contact: r.contact || '', created: r.created
+      cover: r.cover_data || r.cover || '', by: r.by, byUrl: r.by_url, contact: r.contact || '', created: r.created,
+      weight: r.weight || null
     }))
   });
 }
