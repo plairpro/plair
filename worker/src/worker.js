@@ -293,6 +293,57 @@ const PROVIDERS = {
   }
 };
 
+/* Вход через GitHub по коду (device flow): без секретного ключа, хватает
+   публичного Client ID. Страница просит у нас код, человек вводит его на
+   github.com/login/device, страница раз в несколько секунд спрашивает,
+   готово ли, — и получает наш пропуск. Код устройства уходит странице
+   запечатанным, подменить его нельзя. */
+async function githubProfile(token) {
+  const u = await fetch('https://api.github.com/user', {
+    headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'User-Agent': 'plair-verify' }
+  }).then((x) => x.json());
+  if (!u || !u.id || !u.login) throw new Error('github: no user');
+  return { id: 'github:' + u.id, name: cleanName(u.name || u.login), avatar: u.avatar_url || null,
+           login: String(u.login).slice(0, 39) };
+}
+
+async function githubDeviceStart(env, origin) {
+  if (!githubId(env)) return reply(env, origin, { ok: false, why: 'off' }, { status: 404 });
+  const r = await fetch('https://github.com/login/device/code', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json', 'User-Agent': 'plair-verify' },
+    body: new URLSearchParams({ client_id: githubId(env), scope: '' })
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.device_code) return reply(env, origin, { ok: false, why: j.error || 'github' }, { status: 502 });
+  const handle = await seal(env, { k: 'dv', d: j.device_code, e: now() + (j.expires_in || 900) });
+  return reply(env, origin, { ok: true, handle, code: j.user_code, url: j.verification_uri || 'https://github.com/login/device',
+    interval: j.interval || 5, expires: j.expires_in || 900 });
+}
+
+async function githubDevicePoll(env, origin, body) {
+  const st = await unseal(env, body && body.handle, 'dv');
+  if (!st) return reply(env, origin, { ok: false, why: 'expired' }, { status: 400 });
+  const r = await fetch('https://github.com/login/oauth/access_token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json', 'User-Agent': 'plair-verify' },
+    body: new URLSearchParams({ client_id: githubId(env), device_code: st.d,
+      grant_type: 'urn:ietf:params:oauth:grant-type:device_code' })
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!j.access_token) {
+    const wait = j.error === 'authorization_pending' || j.error === 'slow_down';
+    return reply(env, origin, { ok: true, done: false, wait, why: j.error || 'github', interval: j.interval || null });
+  }
+  let p;
+  try { p = await githubProfile(j.access_token); }   // ключ GitHub нужен один раз, дальше не храним
+  catch (e) { return reply(env, origin, { ok: false, why: 'github' }, { status: 502 }); }
+  const session = await saveUser(env, p);
+  const u = await env.DB.prepare('SELECT id, name, avatar, login, admin FROM users WHERE id = ?').bind(p.id).first();
+  return reply(env, origin, { ok: true, done: true, session,
+    user: Object.assign(publicUser(u), { id: u.id, admin: u.admin === 1 }) });
+}
+
 function backURL(env, raw) {
   try {
     const u = new URL(raw);
@@ -886,6 +937,13 @@ export default {
         return googleSignIn(env, origin, body);
       }
 
+      if (path === '/auth/github/device' && m === 'POST') return githubDeviceStart(env, origin);
+      if (path === '/auth/github/poll' && m === 'POST') {
+        let body = null;
+        try { body = await request.json(); } catch (e) { body = null; }
+        return githubDevicePoll(env, origin, body);
+      }
+
       const auth = path.match(/^\/auth\/(github)(\/callback)?$/);
       if (auth && m === 'GET') {
         if (!PROVIDERS[auth[1]].ready(env)) return new Response('This sign-in is not set up yet.', { status: 404 });
@@ -898,6 +956,8 @@ export default {
           providers: (googleId(env) ? ['google'] : [])
             .concat(Object.keys(PROVIDERS).filter((p) => PROVIDERS[p].ready(env))),
           google: googleId(env),
+          // Вход GitHub для авторов: по коду, если секретного ключа нет.
+          github: githubId(env) ? (env.GITHUB_CLIENT_SECRET ? 'web' : 'device') : null,
           max: MAX_LEN
         }, { headers: { 'Cache-Control': 'public, max-age=300' } });
       }

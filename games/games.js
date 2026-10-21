@@ -1072,8 +1072,7 @@
         : 'Confirmed: the code is on the game page.') + '</p>';
       return;
     }
-    var gh = /\.github\.io$/i.test(new URL(url).hostname) &&
-      talkCfg && (talkCfg.providers || []).indexOf('github') !== -1;
+    var gh = /\.github\.io$/i.test(new URL(url).hostname) && talkCfg && !!talkCfg.github;
     var line = '<meta name="plair-verify" content="' + d.code + '">';
     body.innerHTML =
       (gh ? '<p class="g-hint">Game on your own GitHub Pages? Sign in with that GitHub account &mdash; that is all.</p>' +
@@ -1096,9 +1095,67 @@
         .then(function () { toast('Copied'); }, function () {});
       return;
     }
+    if (talkCfg && talkCfg.github === 'device') { githubByCode(); return; }
     // Вход через GitHub — и сразу обратно в форму с той же ссылкой.
     var back = location.origin + '/?add=' + encodeURIComponent(sub.url);
     location.assign(COUNTS + '/auth/github?back=' + encodeURIComponent(back));
+  });
+
+  /* Вход через GitHub по коду: показываем код, человек вводит его на
+     github.com/login/device, а мы раз в несколько секунд спрашиваем
+     сервер, готово ли. Без перехода со страницы — форма остаётся как есть. */
+  var ghDev = null;
+  function githubByCode() {
+    var body = $('s-own-body'), url = sub.url;
+    if (!body) return;
+    body.innerHTML = '<p class="g-hint busy">Asking GitHub for a code&hellip;</p>';
+    api('/auth/github/device', { method: 'POST' }).then(function (d) {
+      if (!d.ok) throw new Error('device');
+      ghDev = { handle: d.handle, code: d.code, url: d.url, gap: (d.interval || 5) * 1000, until: Date.now() + d.expires * 1000, for: url };
+      if (!$('s-own-body')) return;
+      $('s-own-body').innerHTML =
+        '<p class="g-hint">Your GitHub code:</p>' +
+        '<div class="g-own-code g-dev-code"><code>' + esc(d.code) + '</code></div>' +
+        '<a class="g-auth-btn g-own-gh" href="' + esc(d.url) + '" target="_blank" rel="noopener" data-dev-open>' +
+          ICON_GITHUB + 'Copy the code and open GitHub</a>' +
+        '<p class="g-hint busy" id="s-dev-msg">Paste the code on GitHub and press Authorize &mdash; this page notices by itself.</p>';
+      setTimeout(devPoll, ghDev.gap);
+    }).catch(function () {
+      if (!$('s-own-body')) return;
+      drawOwn({ verified: false, code: sub.code }, url);
+      $('s-own-body').insertAdjacentHTML('afterbegin', '<p class="g-hint bad">GitHub did not answer right now ' +
+        '&mdash; try again in a minute, or use the code.</p>');
+    });
+  }
+  function devPoll() {
+    var dv = ghDev;
+    if (!dv || !$('s-own-body') || !sub || sub.url !== dv.for) return;
+    if (Date.now() > dv.until) { ghDev = null; devFail('The code expired.'); return; }
+    api('/auth/github/poll', { method: 'POST', body: { handle: dv.handle } }).then(function (d) {
+      if (ghDev !== dv) return;
+      if (d.ok && d.done) {
+        ghDev = null;
+        session = d.session;
+        try { localStorage.setItem(SESSION_KEY, session); } catch (e) {}
+        meUser = d.user;
+        drawWho();
+        toast('Signed in with GitHub as @' + (d.user.login || d.user.name));
+        checkOwner(dv.for);
+        return;
+      }
+      if (d.ok && d.wait) { if (d.interval) dv.gap = d.interval * 1000; setTimeout(devPoll, dv.gap); return; }
+      ghDev = null;
+      devFail(d.why === 'access_denied' ? 'GitHub sign-in was cancelled.' : 'GitHub sign-in did not work.');
+    }).catch(function () { setTimeout(devPoll, dv.gap * 2); });
+  }
+  function devFail(text) {
+    var m = $('s-dev-msg');
+    if (m) { m.className = 'g-hint bad'; m.innerHTML = esc(text) + ' <button type="button" class="g-link" data-own-github>Try again</button>'; }
+  }
+  document.addEventListener('click', function (e) {
+    if (!(e.target.closest && e.target.closest('[data-dev-open]')) || !ghDev) return;
+    // Сама ссылка открывает GitHub в новой вкладке; мы только кладём код в буфер.
+    copyText(ghDev.code).then(function () { toast('Code copied — paste it on GitHub'); }, function () {});
   });
 
   /* Строка про вес под ссылкой. Тяжелее предела — кнопка отправки гаснет. */
