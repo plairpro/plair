@@ -251,13 +251,23 @@ async function googleSignIn(env, origin, body) {
 /* GitHub: обычный вход с переходом на github.com и обратно. Ему нужен
    секретный ключ приложения (GITHUB_CLIENT_SECRET); пока его нет,
    кнопка GitHub просто не показывается. */
+/* Client ID приложения GitHub — публичный, лежит в wrangler.toml
+   (GITHUB_WEB_CLIENT_ID). Старый секрет GITHUB_CLIENT_ID берём, только
+   если он похож на настоящий ID. */
+function githubId(env) {
+  const ok = (v) => /^[A-Za-z0-9._-]{16,40}$/.test(String(v || '').trim());
+  if (ok(env.GITHUB_WEB_CLIENT_ID)) return String(env.GITHUB_WEB_CLIENT_ID).trim();
+  if (ok(env.GITHUB_CLIENT_ID)) return String(env.GITHUB_CLIENT_ID).trim();
+  return '';
+}
+
 const PROVIDERS = {
   github: {
-    ready: (env) => !!(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET),
+    ready: (env) => !!(githubId(env) && env.GITHUB_CLIENT_SECRET),
     start(env, redirect, state) {
       // Пустой scope — только открытые данные профиля.
       return 'https://github.com/login/oauth/authorize?' + new URLSearchParams({
-        client_id: env.GITHUB_CLIENT_ID, redirect_uri: redirect, state: state, scope: '', allow_signup: 'true'
+        client_id: githubId(env), redirect_uri: redirect, state: state, scope: '', allow_signup: 'true'
       });
     },
     async profile(env, code, redirect) {
@@ -265,7 +275,7 @@ const PROVIDERS = {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
         body: new URLSearchParams({
-          client_id: env.GITHUB_CLIENT_ID, client_secret: env.GITHUB_CLIENT_SECRET,
+          client_id: githubId(env), client_secret: env.GITHUB_CLIENT_SECRET,
           code: code, redirect_uri: redirect
         })
       });
@@ -695,12 +705,23 @@ async function pageHas(target, code) {
     return (await r.text()).slice(0, 3000000).indexOf(code) !== -1;
   } catch (e) { return false; }
 }
+/* Игра на странице организации (team.github.io): пускаем участника,
+   если он открыто состоит в ней (GitHub отвечает 204). */
+async function publicMember(org, login) {
+  try {
+    const r = await fetch('https://api.github.com/orgs/' + org + '/public_members/' + login, {
+      headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'plair-verify' } });
+    return r.status === 204;
+  } catch (e) { return false; }
+}
 async function proveOwner(env, url, me) {
   const code = await ownerCode(env, url);
   if (me && me.admin) return { ok: true, how: 'moderator', code };
   const host = new URL(url).hostname.toLowerCase();
-  if (me && /^github:/.test(me.id) && me.login && host === String(me.login).toLowerCase() + '.github.io') {
-    return { ok: true, how: 'github', code, login: me.login };
+  if (me && /^github:/.test(me.id) && me.login) {
+    const owner = (host.match(/^([a-z0-9-]+)\.github\.io$/) || [])[1];
+    const login = String(me.login).toLowerCase();
+    if (owner && (owner === login || await publicMember(owner, login))) return { ok: true, how: 'github', code, login: me.login };
   }
   if (await pageHas(url, code) || await pageHas(gameDir(url) + 'plair.txt', code)) return { ok: true, how: 'code', code };
   return { ok: false, code };
@@ -778,13 +799,15 @@ function gameOut(origin, r) {
     id: r.game, title: r.title, blurb: r.blurb || '', tags: JSON.parse(r.tags || '[]'),
     cover: r.has_data ? origin + '/cover/' + r.game : (r.cover || ''),
     url: r.url, repo: r.by_url, by: r.by, byUrl: r.by_url,
-    added: new Date((r.decided || r.created) * 1000).toISOString().slice(0, 10)
+    added: new Date((r.decided || r.created) * 1000).toISOString().slice(0, 10),
+    // Автор доказал, что игра его (GitHub или код на странице) — в ленте галочка.
+    verified: r.proof === 'github' || r.proof === 'code'
   };
 }
 
 async function approvedGames(env, origin, url) {
   const { results } = await env.DB.prepare(
-    'SELECT game, title, blurb, tags, cover, (cover_data IS NOT NULL) AS has_data, url, by, by_url, created, decided ' +
+    'SELECT game, title, blurb, tags, cover, (cover_data IS NOT NULL) AS has_data, url, by, by_url, created, decided, proof ' +
     "FROM submissions WHERE status = 'approved' ORDER BY decided DESC LIMIT 500"
   ).all();
   return reply(env, origin, { ok: true, games: (results || []).map((r) => gameOut(url.origin, r)) },

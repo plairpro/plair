@@ -14,6 +14,9 @@ database_id = "8bbd0b76-6206-45af-8c5b-e2024766ee8c"
 # Вход через Google. Client ID публичный (виден в коде любой страницы со
 # входом через Google), поэтому лежит здесь, а не в секретах.
 GOOGLE_WEB_CLIENT_ID = "750018174613-mq3urvdq26e6e098fs70t4vof956hj2t.apps.googleusercontent.com"
+# Вход через GitHub (только для авторов игр в форме «+»). ID публичный;
+# секрет кладётся отдельно: npx wrangler secret put GITHUB_CLIENT_SECRET
+GITHUB_WEB_CLIENT_ID = "Ov23liYRVZMR4woJgLhe"
 TG_CHAT_ID = "876305"
 # Модератор: отпечаток (SHA-256) его адреса Google. Сам адрес нигде не хранится.
 ADMIN_EMAIL_SHA256 = "8df57aa3211a5b441dcebda1aabb187654402da6364b3f586dfa2170c3abc9ea"

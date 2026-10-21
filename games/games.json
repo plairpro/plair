@@ -28,7 +28,8 @@
     "url": "https://plairpro.github.io/shift/",
     "repo": "https://github.com/plairpro/shift",
     "by": "plairpro",
-    "added": "2026-10-07"
+    "added": "2026-10-07",
+    "verified": true
   },
   {
     "id": "office",
@@ -45,7 +46,8 @@
     "url": "https://plairpro.github.io/office/",
     "repo": "https://github.com/plairpro/office",
     "by": "plairpro",
-    "added": "2026-10-05"
+    "added": "2026-10-05",
+    "verified": true
   },
   {
     "id": "rover",
@@ -62,7 +64,8 @@
     "url": "https://plairpro.github.io/rover/",
     "repo": "https://github.com/plairpro/rover",
     "by": "plairpro",
-    "added": "2026-10-05"
+    "added": "2026-10-05",
+    "verified": true
   },
   {
     "id": "scrollprincess",
@@ -79,7 +82,8 @@
     "url": "https://plairpro.github.io/scrollprincess/",
     "repo": "https://github.com/plairpro/scrollprincess",
     "by": "plairpro",
-    "added": "2026-10-01"
+    "added": "2026-10-01",
+    "verified": true
   },
   {
     "id": "dron",
@@ -96,7 +100,8 @@
     "url": "https://plairpro.github.io/dron/",
     "repo": "https://github.com/plairpro/dron",
     "by": "plairpro",
-    "added": "2026-09-29"
+    "added": "2026-09-29",
+    "verified": true
   },
   {
     "id": "memsbox",
@@ -113,6 +118,7 @@
     "url": "https://plairpro.github.io/memsbox/",
     "repo": "https://github.com/plairpro/memsbox",
     "by": "plairpro",
-    "added": "2026-09-28"
+    "added": "2026-09-28",
+    "verified": true
   }
 ]

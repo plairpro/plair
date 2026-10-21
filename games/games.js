@@ -341,7 +341,7 @@
               'aria-label="Show all genres" hidden></button></div>' +
           '<div class="g-meta">' +
             '<a class="g-author" href="' + esc(g.byUrl || ('https://github.com/' + g.by)) + '" target="_blank" rel="noopener">@' +
-              esc(g.by) + '</a>' +
+              esc(g.by) + (g.verified ? ICON_VERIFIED : '') + '</a>' +
             /* Запуски, лайк, комментарии, сохранить и «поделиться» — строкой справа от автора. */
             '<span class="g-acts-row">' + playsHTML(i) + likeHTML(i) + talkHTML(i) + saveHTML(i) + shareHTML(i, 'rail') + '</span>' +
           '</div></div>' +
@@ -428,6 +428,10 @@
   }
   addEventListener('resize', function () { requestAnimationFrame(fitTags); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitTags);
+
+  /* Галочка «автор подтверждён»: игру прислал тот, кто ею владеет. */
+  var ICON_VERIFIED = '<svg class="g-verified" viewBox="0 0 24 24" role="img" aria-label="Verified author">' +
+    '<title>Verified author</title><circle cx="12" cy="12" r="10"/><path d="m7.5 12.3 3 3 6-6.3"/></svg>';
 
   var SWIPE = '<div class="g-swipe"><svg viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6" ' +
     'stroke-linecap="round" stroke-linejoin="round"/></svg>Swipe</div>';
@@ -570,10 +574,15 @@
       '</ol>' +
 
       '<h4>Show it&rsquo;s yours</h4>' +
-      '<p>Only the author can add a game. The form gives you a short line like ' +
-        '<code>&lt;meta name="plair-verify" content="plair-&hellip;"&gt;</code> &mdash; put it inside ' +
-        '<code>&lt;head&gt;</code> of your game&rsquo;s <code>index.html</code> (or save the code as ' +
-        '<code>plair.txt</code> next to it), publish, and press <b>check again</b>. Works on any hosting.</p>' +
+      '<p>Only the author can add a game. The form asks for one of two proofs:</p>' +
+      '<ul>' +
+        '<li><b>Sign in with GitHub</b> &mdash; if the game is on GitHub Pages (<code>your-name.github.io/&hellip;</code>), ' +
+          'sign in as <code>your-name</code>. For a team page, you need to be a public member of that team.</li>' +
+        '<li><b>Add a code to the game</b> &mdash; works on any hosting. The form gives you a line like ' +
+          '<code>&lt;meta name="plair-verify" content="plair-&hellip;"&gt;</code>; put it inside <code>&lt;head&gt;</code> ' +
+          'of your <code>index.html</code> (or save the code as <code>plair.txt</code> next to it), publish, press <b>check again</b>.</li>' +
+      '</ul>' +
+      '<p class="g-hint">Games added this way show a check mark next to the author&rsquo;s name in the feed.</p>' +
 
       '<h4>Limits</h4>' +
       '<ul>' +
@@ -1873,11 +1882,11 @@
     if (!meUser) {
       var ps = (talkCfg && talkCfg.providers) || [];
       foot.innerHTML = '';
-      box.innerHTML = ps.length
+      box.innerHTML = ps.indexOf('google') !== -1
         ? '<p class="g-c-ask">Sign in to join the conversation.</p><div class="g-auth">' +
+          // GitHub — только для авторов, в форме «+»; в комментариях — Google.
           (ps.indexOf('google') !== -1 ? '<div class="g-gbtn" id="c-google"></div>' : '') +
-          (ps.indexOf('github') !== -1 ? '<button class="g-auth-btn" type="button" data-signin="github">' +
-            ICON_GITHUB + 'Continue with GitHub</button>' : '') +
+
           '</div><p class="g-hint">We only keep your name and picture to show next to what you write. ' +
           'No email, no password. <a href="/privacy/" target="_blank" rel="noopener">Privacy</a></p>'
         : '<p class="g-hint">Commenting opens soon.</p>';
