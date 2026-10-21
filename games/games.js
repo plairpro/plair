@@ -1072,7 +1072,8 @@
         : 'Confirmed: the code is on the game page.') + '</p>';
       return;
     }
-    var gh = /\.github\.io$/i.test(new URL(url).hostname) && talkCfg && !!talkCfg.github;
+    var gh = /\.github\.io$/i.test(new URL(url).hostname) && talkCfg &&
+      (!!talkCfg.github || (talkCfg.providers || []).indexOf('github') !== -1);
     var line = '<meta name="plair-verify" content="' + d.code + '">';
     body.innerHTML =
       (gh ? '<p class="g-hint">Game on your own GitHub Pages? Sign in with that GitHub account &mdash; that is all.</p>' +
