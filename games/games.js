@@ -555,15 +555,10 @@
       '</ol>' +
 
       '<h4>Show it&rsquo;s yours</h4>' +
-      '<p>Only the author can add a game. The form asks for one of two proofs:</p>' +
-      '<ul>' +
-        '<li><b>Sign in with GitHub</b> &mdash; if the game is on your own GitHub Pages ' +
-          '(<code>your-name.github.io/&hellip;</code>), signing in as <code>your-name</code> is enough.' +
-          (talkCfg && (talkCfg.providers || []).indexOf('github') === -1 ? ' <i>Opens soon.</i>' : '') + '</li>' +
-        '<li><b>Add a code to the game</b> &mdash; works on any hosting. The form gives you a line like ' +
-          '<code>&lt;meta name="plair-verify" content="plair-&hellip;"&gt;</code>; put it in your ' +
-          '<code>index.html</code> (or save the code as <code>plair.txt</code> next to it), publish, press Check.</li>' +
-      '</ul>' +
+      '<p>Only the author can add a game. The form gives you a short line like ' +
+        '<code>&lt;meta name="plair-verify" content="plair-&hellip;"&gt;</code> &mdash; put it inside ' +
+        '<code>&lt;head&gt;</code> of your game&rsquo;s <code>index.html</code> (or save the code as ' +
+        '<code>plair.txt</code> next to it), publish, and press <b>check again</b>. Works on any hosting.</p>' +
 
       '<h4>Limits</h4>' +
       '<ul>' +
