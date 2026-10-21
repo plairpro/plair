@@ -512,6 +512,7 @@ async function forgetMe(env, origin, me) {
     env.DB.prepare('DELETE FROM comments WHERE user = ?').bind(me.id),
     env.DB.prepare('DELETE FROM saves WHERE user = ?').bind(me.id),
     env.DB.prepare('DELETE FROM lists WHERE user = ?').bind(me.id),
+    env.DB.prepare('DELETE FROM scores WHERE who = ?').bind(me.id),
     env.DB.prepare('DELETE FROM users WHERE id = ?').bind(me.id)
   ]);
   return reply(env, origin, { ok: true });
@@ -653,6 +654,98 @@ async function counters(env, origin, ctx, url, body) {
   return reply(env, origin, { ok: true, on: on, likes: (cur && cur.likes) || 0 });
 }
 
+/* ── рекорды и дуэли (PLAIR SDK) ─────────────────────── */
+/* Счёт присылает сама игра через sdk.js, лента передаёт его сюда.
+   Храним только лучший результат игрока; гость — по номеру браузера,
+   вошедший — по аккаунту, с именем в таблице. Счёт можно подделать в
+   любой браузерной игре, поэтому лимиты и ручная чистка модератором. */
+const SCORES_A_DAY = 60;       // отправок счёта с браузера на игру в сутки
+const DUELS_A_DAY = 20;        // ссылок «побей мой рекорд» с браузера в сутки
+const BOARD_SIZE = 10;
+
+async function dayCount(env, visitor, game, kind, cap) {
+  const day = today();
+  const row = await env.DB.prepare('SELECT n FROM acts_today WHERE visitor = ? AND game = ? AND day = ? AND kind = ?')
+    .bind(visitor, game, day, kind).first();
+  if (((row && row.n) || 0) >= cap) return false;
+  await env.DB.prepare('INSERT INTO acts_today (visitor, game, day, kind, n) VALUES (?, ?, ?, ?, 1) ' +
+    'ON CONFLICT(visitor, game, day, kind) DO UPDATE SET n = n + 1').bind(visitor, game, day, kind).run();
+  return true;
+}
+function guestName(who) { return 'Guest ' + String(who).slice(-4).toUpperCase(); }
+function better(lower) { return lower ? '<' : '>'; }
+
+async function postScore(env, origin, me, body) {
+  const id = body && String(body.id || ''), visitor = body && String(body.visitor || '');
+  const value = Number(body && body.value);
+  if (!ID.test(id) || !VISITOR.test(visitor) || !Number.isFinite(value) || Math.abs(value) > 1e12) {
+    return reply(env, origin, { ok: false, why: 'bad' }, { status: 400 });
+  }
+  if (!(await known(env, id))) return reply(env, origin, { ok: false, why: 'unknown game' }, { status: 404 });
+  if (!(await dayCount(env, visitor, id, 'score', SCORES_A_DAY))) return reply(env, origin, { ok: false, why: 'day' }, { status: 429 });
+  // Сторону «чем меньше, тем лучше» задаёт первый присланный счёт игры.
+  await env.DB.prepare('INSERT OR IGNORE INTO boards (game, lower) VALUES (?, ?)').bind(id, body.lower ? 1 : 0).run();
+  const lower = ((await env.DB.prepare('SELECT lower FROM boards WHERE game = ?').bind(id).first()) || {}).lower === 1;
+  const who = me ? me.id : 'v:' + visitor;
+  const old = await env.DB.prepare('SELECT best FROM scores WHERE game = ? AND who = ?').bind(id, who).first();
+  const improved = !old || (lower ? value < old.best : value > old.best);
+  if (improved) {
+    await env.DB.prepare('INSERT INTO scores (game, who, best, name, updated) VALUES (?, ?, ?, ?, ?) ' +
+      'ON CONFLICT(game, who) DO UPDATE SET best = excluded.best, name = excluded.name, updated = excluded.updated')
+      .bind(id, who, value, me ? me.name : null, now()).run();
+  }
+  const best = improved ? value : old.best;
+  const ahead = await env.DB.prepare('SELECT COUNT(*) AS n FROM scores WHERE game = ? AND best ' + better(lower) + ' ?')
+    .bind(id, best).first();
+  const total = await env.DB.prepare('SELECT COUNT(*) AS n FROM scores WHERE game = ?').bind(id).first();
+  return reply(env, origin, { ok: true, value, best, improved, first: !old, lower,
+    rank: ((ahead && ahead.n) || 0) + 1, total: (total && total.n) || 1 });
+}
+
+async function readBoard(env, origin, me, url) {
+  const id = url.searchParams.get('game') || '', visitor = url.searchParams.get('visitor') || '';
+  if (!ID.test(id)) return reply(env, origin, { ok: false, why: 'bad' }, { status: 400 });
+  const lower = ((await env.DB.prepare('SELECT lower FROM boards WHERE game = ?').bind(id).first()) || {}).lower === 1;
+  const { results } = await env.DB.prepare('SELECT who, best, name FROM scores WHERE game = ? ORDER BY best ' +
+    (lower ? 'ASC' : 'DESC') + ', updated ASC LIMIT ?').bind(id, BOARD_SIZE).all();
+  const mine = me ? me.id : (VISITOR.test(visitor) ? 'v:' + visitor : '');
+  const total = await env.DB.prepare('SELECT COUNT(*) AS n FROM scores WHERE game = ?').bind(id).first();
+  let my = null;
+  if (mine) {
+    const r = await env.DB.prepare('SELECT best FROM scores WHERE game = ? AND who = ?').bind(id, mine).first();
+    if (r) {
+      const ahead = await env.DB.prepare('SELECT COUNT(*) AS n FROM scores WHERE game = ? AND best ' + better(lower) + ' ?')
+        .bind(id, r.best).first();
+      my = { best: r.best, rank: ((ahead && ahead.n) || 0) + 1 };
+    }
+  }
+  return reply(env, origin, { ok: true, lower, total: (total && total.n) || 0, mine: my,
+    top: (results || []).map((r) => ({ name: r.name || guestName(r.who), best: r.best, me: r.who === mine })) });
+}
+
+async function makeDuel(env, origin, me, body) {
+  const id = body && String(body.id || ''), visitor = body && String(body.visitor || '');
+  const value = Number(body && body.value);
+  if (!ID.test(id) || !VISITOR.test(visitor) || !Number.isFinite(value) || Math.abs(value) > 1e12) {
+    return reply(env, origin, { ok: false, why: 'bad' }, { status: 400 });
+  }
+  if (!(await known(env, id))) return reply(env, origin, { ok: false, why: 'unknown game' }, { status: 404 });
+  if (!(await dayCount(env, visitor, id, 'duel', DUELS_A_DAY))) return reply(env, origin, { ok: false, why: 'day' }, { status: 429 });
+  const lower = ((await env.DB.prepare('SELECT lower FROM boards WHERE game = ?').bind(id).first()) || {}).lower === 1;
+  const code = newCode();
+  await env.DB.prepare('INSERT INTO duels (code, game, score, name, lower, created) VALUES (?, ?, ?, ?, ?, ?)')
+    .bind(code, id, value, me ? me.name : null, lower ? 1 : 0, now()).run();
+  return reply(env, origin, { ok: true, code });
+}
+
+async function readDuel(env, origin, code) {
+  if (!CODE.test(code)) return reply(env, origin, { ok: false, why: 'bad' }, { status: 400 });
+  const r = await env.DB.prepare('SELECT game, score, name, lower FROM duels WHERE code = ?').bind(code).first();
+  if (!r) return reply(env, origin, { ok: false, why: 'gone' }, { status: 404 });
+  return reply(env, origin, { ok: true, game: r.game, score: r.score, name: r.name || null, lower: r.lower === 1 },
+    { headers: { 'Cache-Control': 'public, max-age=300' } });
+}
+
 /* ── таблицы ────────────────────────────────────────────── */
 /* Worker сам создаёт свои таблицы при первом запросе — отдельно
    запускать schema.sql не нужно (он лежит рядом для справки). */
@@ -687,7 +780,16 @@ const SCHEMA = [
   // нельзя было накрутить. Вчерашние строки стираются попутно.
   'CREATE TABLE IF NOT EXISTS acts_today (visitor TEXT NOT NULL, game TEXT NOT NULL, day TEXT NOT NULL, ' +
     'kind TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (visitor, game, day, kind))',
-  'CREATE INDEX IF NOT EXISTS acts_today_day ON acts_today (day)'
+  'CREATE INDEX IF NOT EXISTS acts_today_day ON acts_today (day)',
+  // Рекорды из PLAIR SDK: лучший счёт каждого игрока (аккаунт или браузер)
+  // в каждой игре. boards — в какую сторону счёт лучше. duels — ссылки
+  // «побей мой рекорд».
+  'CREATE TABLE IF NOT EXISTS scores (game TEXT NOT NULL, who TEXT NOT NULL, best REAL NOT NULL, ' +
+    'name TEXT, updated INTEGER NOT NULL, PRIMARY KEY (game, who))',
+  'CREATE INDEX IF NOT EXISTS scores_board ON scores (game, best)',
+  'CREATE TABLE IF NOT EXISTS boards (game TEXT PRIMARY KEY, lower INTEGER NOT NULL DEFAULT 0)',
+  'CREATE TABLE IF NOT EXISTS duels (code TEXT PRIMARY KEY, game TEXT NOT NULL, score REAL NOT NULL, ' +
+    'name TEXT, lower INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL)'
 ];
 let installed = null;
 function install(env) {
@@ -971,6 +1073,20 @@ export default {
           return setSave(env, origin, me, body || {});
         }
       }
+
+      if (path === '/score' && m === 'POST') {
+        let body = null;
+        try { body = await request.json(); } catch (e) { body = null; }
+        return postScore(env, origin, await who(env, request), body);
+      }
+      if (path === '/board' && m === 'GET') return readBoard(env, origin, await who(env, request), url);
+      if (path === '/duel' && m === 'POST') {
+        let body = null;
+        try { body = await request.json(); } catch (e) { body = null; }
+        return makeDuel(env, origin, await who(env, request), body);
+      }
+      const duel = path.match(/^\/duel\/([A-Za-z0-9]{8,12})$/);
+      if (duel && m === 'GET') return readDuel(env, origin, duel[1]);
 
       if (path === '/lists' && m === 'POST') return shareList(env, origin, await who(env, request));
       const lst = path.match(/^\/lists\/([A-Za-z0-9]{1,20})$/);

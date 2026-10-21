@@ -101,6 +101,10 @@ npx wrangler d1 execute plair-counts --remote --command "UPDATE users SET banned
 | `POST /skip` `{id, visitor}` | скип: игру закрыли быстрее 10 секунд после запуска; один в сутки с браузера на игру |
 | `POST /time` `{id, visitor, seconds}` | секунды в игре: до 60 за запрос, до 30 минут в сутки с браузера на игру |
 | `GET /config` | какие входы настроены |
+| `POST /score` `{id, visitor, value, lower}` | счёт партии из PLAIR SDK; хранится лучший, до 60 в сутки с браузера на игру |
+| `GET /board?game=…&visitor=…` | таблица рекордов: топ-10 и моё место |
+| `POST /duel` `{id, visitor, value}` → `{code}` | ссылка «побей мой рекорд» (`/?g=игра&duel=код`) |
+| `GET /duel/:code` | чей это вызов и какой счёт побить |
 | `POST /verify` `{url}` | «это моя игра»: вход через GitHub (для name.github.io) или код `plair-…` на странице игры / в `plair.txt` |
 | `POST /submit` | заявка на игру; без доказательства авторства и тяжелее 10 МБ — отказ |
 | `POST /auth/google/token` `{credential}` | вход через Google: паспорт → пропуск |

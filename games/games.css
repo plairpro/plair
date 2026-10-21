@@ -342,6 +342,36 @@ a.g-auth-btn{text-decoration:none}
   grid-area:1/1;z-index:1}
 .g-loading{grid-area:1/1;place-self:center;color:var(--dim);font-size:14px;margin:0;
   text-align:center;padding:0 20px}
+/* Счёт из PLAIR SDK: карточка под шапкой проигрывателя, справа. */
+.g-trophy[hidden]{display:none}
+.g-trophy svg{width:17px;height:17px;stroke-width:1.7}
+.g-score{position:absolute;z-index:5;right:12px;top:calc(66px + env(safe-area-inset-top,0px));
+  width:min(320px,calc(100% - 24px));max-height:calc(100% - 100px);overflow:auto;
+  background:rgba(14,18,13,.94);border:1px solid var(--line-2);border-radius:16px;padding:14px 16px 16px;
+  box-shadow:0 12px 40px rgba(0,0,0,.45)}
+.g-score[hidden]{display:none}
+.g-score-x{position:absolute;right:6px;top:4px;width:30px;height:30px;border:0;background:none;color:var(--muted);
+  font-size:20px;line-height:1;cursor:pointer}
+.g-score-x:hover{color:var(--ink)}
+.g-score-h{margin:0 26px 4px 0;font-size:13px;font-weight:600;color:var(--ink)}
+.g-score-h.good{color:var(--accent)}
+.g-score-big{margin:2px 0 0;font-family:var(--display);font-weight:700;font-size:34px;letter-spacing:-.03em;line-height:1.1}
+.g-score-meta{margin:2px 0 0;font-size:13px;color:var(--muted)}
+.g-score-note{margin:8px 0 0;font-size:12px;color:var(--dim);line-height:1.45}
+.g-score-note.bad{color:var(--danger)}
+.g-score-acts{display:flex;align-items:center;gap:14px;margin-top:12px}
+.g-score-acts .g-c-post{height:32px;padding:0 14px;font-size:13px}
+.g-board{list-style:none;margin:8px 0 0;padding:0;font-size:13px}
+.g-board li{display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line)}
+.g-board li span{width:22px;flex:none;color:var(--dim);font-variant-numeric:tabular-nums}
+.g-board li b{flex:1;min-width:0;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.g-board li i{font-style:normal;font-weight:600;font-variant-numeric:tabular-nums}
+.g-board li.is-me b,.g-board li.is-me i{color:var(--accent)}
+/* Вызов друга на карточке игры. */
+.g-duel{display:inline-block;margin:0 0 8px;padding:5px 11px;border-radius:999px;background:var(--accent);
+  color:var(--on-accent);font-size:12.5px;font-weight:600}
+.g-duel b{font-weight:800}
+
 /* Запасной выход: не стирает игру, а подсказывает снизу, пока та грузится. */
 .g-rescue{position:absolute;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));
   z-index:2;display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center;

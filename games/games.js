@@ -483,6 +483,7 @@
       return;
     }
     requestAnimationFrame(fitTags);
+    setTimeout(drawDuel, 0);
     deck.innerHTML = list.map(function (g, pos) { return slideHTML(g, games.indexOf(g), pos); }).join('') +
       (list.length > 1 ? SWIPE : '');
     deck.scrollTop = 0;
@@ -553,6 +554,7 @@
      пределы веса и загрузки, обложка), потом — как упорядочена лента.
      Окно «+» ссылается сюда и умеет вернуться к начатой заявке. */
   var LIMIT_MB = 10, LIMIT_GOOD_MB = 5, LIMIT_SEC = 10;
+  var SDK_LINE = '&lt;script src=&quot;https://plair.pro/sdk.js&quot;&gt;&lt;/script&gt;';
   var LIMIT_BYTES = LIMIT_MB * 1024 * 1024;
   var draftUrl = '';   // ссылка из «+», пока человек читает правила
 
@@ -604,6 +606,21 @@
         'picked up by itself, or upload a picture in the form. Best: upright 9:16, shot <b>inside</b> the game ' +
         'rather than on the title screen.</p>' +
       '<p class="g-hint">Some games refuse to be embedded. Those open in a separate tab instead &mdash; that is fine.</p>' +
+
+      '<h4 id="how-scores">Scores and challenges</h4>' +
+      '<p><b>For players.</b> In games that support it, finish a round and your score appears at the top: your best, ' +
+        'your place on the leaderboard and <b>Challenge a friend</b> &mdash; a link that opens the same game with your ' +
+        'score to beat. Only your best score counts. Sign in with Google to show your name; otherwise you are ' +
+        '&ldquo;Guest&rdquo;. Obviously faked scores are removed.</p>' +
+      '<p><b>For developers</b> &mdash; optional, two lines. Add the script to <code>&lt;head&gt;</code>, next to the ' +
+        '<code>plair-verify</code> line:</p>' +
+      '<div class="g-own-code"><code>' + SDK_LINE + '</code><button type="button" class="g-link" data-sdk-copy>Copy</button></div>' +
+      '<p>When a round ends, send the score: <code>PLAIR.score(points)</code>. Timed game where less is better? ' +
+        '<code>PLAIR.score(seconds, { lowerIsBetter: true })</code>. Want to show the friend&rsquo;s score in your game? ' +
+        '<code>PLAIR.onChallenge(c =&gt; &hellip; c.score, c.name)</code>.</p>' +
+      '<p class="g-hint">Outside the feed the script does nothing and breaks nothing. It sends only the score you pass, ' +
+        'nothing about the player. Check it with <b>Try it in the player</b> in the form: you will see ' +
+        '&ldquo;PLAIR SDK connected&rdquo;.</p>' +
       (opts.back ? '' : '<p><button type="button" class="g-link" data-add-open>Add a game</button></p>') +
 
       '<h4>How the feed is ordered</h4>' +
@@ -833,9 +850,15 @@
 
   document.addEventListener('click', function (ev) {
     if (ev.target.closest && ev.target.closest('[data-contact]')) openContact();
-    if (ev.target.closest && ev.target.closest('[data-how-add]')) {
+    var howAdd = ev.target.closest && ev.target.closest('[data-how-add]');
+    if (howAdd) {
       draftUrl = ($('s-url') && $('s-url').value) || draftUrl;
       howSheet({ back: true });
+      var at = howAdd.getAttribute('data-how-at') && $(howAdd.getAttribute('data-how-at'));
+      if (at) at.scrollIntoView({ block: 'start' });
+    }
+    if (ev.target.closest && ev.target.closest('[data-sdk-copy]')) {
+      copyText('<script src="https://plair.pro/sdk.js"></' + 'script>').then(function () { toast('Copied'); }, function () {});
     }
     if (ev.target.closest && ev.target.closest('[data-add-back]')) submitSheet({ url: draftUrl });
     if (ev.target.closest && ev.target.closest('[data-add-open]')) submitSheet();
@@ -938,6 +961,12 @@
           'placeholder="Email or Telegram, if we have a question"></label>' +
         '<div class="g-own" id="s-own"><span class="g-own-h">Show it&rsquo;s yours</span>' +
           '<div id="s-own-body"><p class="g-hint busy">Checking&hellip;</p></div></div>' +
+        '<div class="g-own"><span class="g-own-h">Scores and challenges &mdash; optional</span>' +
+          '<p class="g-hint">Give players a leaderboard and &ldquo;beat my score&rdquo; links. Add this line to ' +
+            '<code>&lt;head&gt;</code>, next to the line above:</p>' +
+          '<div class="g-own-code"><code>' + SDK_LINE + '</code><button type="button" class="g-link" data-sdk-copy>Copy</button></div>' +
+          '<p class="g-hint">and call <code>PLAIR.score(points)</code> when a round ends. ' +
+            '<button type="button" class="g-link" data-how-add data-how-at="how-scores">How it works</button></p></div>' +
         btn('s-go', 'Send for review') +
         '<p class="g-hint" id="f-msg"></p>' +
       '</div>');
@@ -2186,11 +2215,14 @@
       '<button class="g-x" type="button" data-quit aria-label="Close the game">' +
         '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 16M20 4 4 20"/></svg></button>' +
       '<strong>' + esc(g.title) + '</strong><span class="g-sp"></span>' +
+      '<button class="g-x g-trophy" type="button" data-board aria-label="Leaderboard" hidden>' + ICON_TROPHY + '</button>' +
       '<button class="g-x" type="button" data-full aria-label="Fill the screen">' +
         '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" ' +
         'stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
       (games.indexOf(g) !== -1 && !opts.preview ? shareHTML(games.indexOf(g), 'bar') : '') +
-      '</div><div class="g-stage" id="stage"></div>';
+      '</div><div class="g-stage" id="stage"></div>' +
+      '<div class="g-score" id="g-score" role="status" aria-live="polite" hidden></div>';
+    p.__g = g; p.__preview = !!opts.preview;
     document.body.appendChild(p);
     document.body.style.overflow = 'hidden';
     player = p;
@@ -2280,6 +2312,148 @@
     player = null;
     if (!open) document.body.style.overflow = '';
     if (history.state && history.state.play) history.back();
+  }
+
+  /* ── рекорды и вызовы (PLAIR SDK) ────────────────────── */
+  /* Игра с sdk.js шлёт ленте «hello» и счёт каждой партии. Лента хранит
+     лучший результат, показывает место в таблице и делает ссылку
+     «побей мой рекорд». Вызов друга игра получает обратно, если хочет
+     его показать (PLAIR.onChallenge). Принимаем сообщения только от окна
+     той игры, что сейчас открыта. */
+  var ICON_TROPHY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0V4zM8 6H5v1a3 3 0 0 0 3 3M16 6h3v1a3 3 0 0 1-3 3M12 13v4M9 20h6" ' +
+    'stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var duel = null;          // {code, game, score, name, lower} — пришли по ссылке друга
+  var scoreTimer = 0;
+
+  function num(v) {
+    var n = Number(v);
+    return Math.abs(n) >= 1000 ? n.toLocaleString('en-US', { maximumFractionDigits: 0 })
+      : String(Math.round(n * 100) / 100);
+  }
+  function frameWin() { var f = player && player.querySelector('iframe'); return f ? f.contentWindow : null; }
+
+  addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || d.plair !== 1 || !player || !e.source || e.source !== frameWin()) return;
+    var g = player.__g;
+    if (d.type === 'hello') return sdkHello(g);
+    if (d.type === 'score') return sdkScore(g, Number(d.value), !!d.lower);
+  });
+
+  function sdkHello(g) {
+    var t = player && player.querySelector('[data-board]');
+    if (t && !player.__preview) t.hidden = false;
+    if (player.__preview) { scorePanel('<p class="g-score-h good">PLAIR SDK connected</p>' +
+      '<p class="g-score-note">Finish a round — the score shows up here.</p>', 6000); return; }
+    if (duel && duel.game === g.id) {
+      try {
+        frameWin().postMessage({ plair: 1, type: 'challenge',
+          challenge: { score: duel.score, name: duel.name, lowerIsBetter: duel.lower } }, '*');
+      } catch (err) {}
+    }
+  }
+
+  function scorePanel(html, hideAfter) {
+    var box = player && player.querySelector('#g-score');
+    if (!box) return;
+    box.innerHTML = '<button class="g-score-x" type="button" data-score-close aria-label="Hide">&times;</button>' + html;
+    box.hidden = false;
+    clearTimeout(scoreTimer);
+    if (hideAfter) scoreTimer = setTimeout(function () { if (!box.matches(':hover, :focus-within')) box.hidden = true; }, hideAfter);
+  }
+
+  function sdkScore(g, v, lower) {
+    if (!isFinite(v)) return;
+    if (player.__preview) {
+      scorePanel('<p class="g-score-h good">Score received: ' + num(v) + '</p>' +
+        '<p class="g-score-note">In the feed it goes to the leaderboard. Your game is ready for challenges.</p>', 8000);
+      return;
+    }
+    if (!COUNTS || !g || !g.id) return;
+    api('/score', { method: 'POST', body: { id: g.id, visitor: visitor(), value: v, lower: lower } }).then(function (d) {
+      if (!d.ok || !player || player.__g !== g) return;
+      var head = '';
+      if (duel && duel.game === g.id) {
+        var won = d.lower ? v < duel.score : v > duel.score;
+        head = won ? 'You beat ' + esc(duel.name || 'your friend') + '&rsquo;s ' + num(duel.score) + '!'
+          : num(duel.score) + ' to beat ' + esc(duel.name || 'your friend') + ' &mdash; try again';
+      } else if (d.improved && !d.first) head = 'New best!';
+      var hint = '';
+      try {
+        if (!localStorage.getItem('plair-score-hint')) {
+          localStorage.setItem('plair-score-hint', '1');
+          hint = '<p class="g-score-note">Only your best score counts. ' +
+            (meUser ? '' : 'Sign in to show your name on the board.') + '</p>';
+        }
+      } catch (e) {}
+      scorePanel((head ? '<p class="g-score-h' + (/beat|best/i.test(head) && head.indexOf('try') === -1 ? ' good' : '') + '">' + head + '</p>' : '') +
+        '<p class="g-score-big">' + num(v) + '</p>' +
+        '<p class="g-score-meta">Best ' + num(d.best) + ' &middot; #' + d.rank + ' of ' + d.total + '</p>' +
+        '<div class="g-score-acts"><button class="g-c-post" type="button" data-duel-make="' + esc(String(d.best)) + '">Challenge a friend</button>' +
+        '<button class="g-link" type="button" data-board>Leaderboard</button></div>' + hint, 9000);
+    }).catch(function () {});
+  }
+
+  function showBoard(g) {
+    scorePanel('<p class="g-score-h">Leaderboard</p><p class="g-score-note busy">Loading&hellip;</p>');
+    api('/board?game=' + encodeURIComponent(g.id) + '&visitor=' + visitor()).then(function (d) {
+      if (!player || player.__g !== g) return;
+      if (!d.ok) throw new Error('board');
+      var rows = d.top.map(function (r, i) {
+        return '<li class="' + (r.me ? 'is-me' : '') + '"><span>' + (i + 1) + '</span><b>' + esc(r.name) + '</b><i>' + num(r.best) + '</i></li>';
+      }).join('');
+      var me = d.mine && !d.top.some(function (r) { return r.me; })
+        ? '<li class="is-me"><span>' + d.mine.rank + '</span><b>You</b><i>' + num(d.mine.best) + '</i></li>' : '';
+      scorePanel('<p class="g-score-h">Leaderboard &middot; ' + d.total + (d.total === 1 ? ' player' : ' players') + '</p>' +
+        (rows ? '<ol class="g-board">' + rows + me + '</ol>' : '<p class="g-score-note">No scores yet &mdash; finish a round to be first.</p>') +
+        '<p class="g-score-note">' + (d.lower ? 'Lower is better. ' : '') + 'Best score per player. ' +
+          (meUser ? '' : 'Sign in to show your name instead of “Guest”.') + '</p>');
+    }).catch(function () { scorePanel('<p class="g-score-note bad">The leaderboard did not load.</p>', 4000); });
+  }
+
+  function makeDuel(g, best) {
+    api('/duel', { method: 'POST', body: { id: g.id, visitor: visitor(), value: Number(best) } }).then(function (d) {
+      if (!d.ok) throw new Error('duel');
+      var link = shareURL(g) + '&duel=' + d.code;
+      var text = 'I scored ' + num(best) + ' in ' + g.title + ' on PLAIR — can you beat it?';
+      countShare(g);
+      if (navigator.share && matchMedia('(pointer:coarse)').matches) {
+        navigator.share({ title: g.title, text: text, url: link }).catch(function () {});
+      } else {
+        copyText(text + ' ' + link).then(function () { toast('Challenge link copied — send it to a friend'); },
+          function () { toast(link); });
+      }
+    }).catch(function () { toast('That did not work. Try again.'); });
+  }
+
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest && e.target.closest('[data-board],[data-duel-make],[data-score-close]');
+    if (!el || !player) return;
+    var g = player.__g;
+    if (el.hasAttribute('data-score-close')) { player.querySelector('#g-score').hidden = true; return; }
+    if (el.hasAttribute('data-duel-make')) { makeDuel(g, el.getAttribute('data-duel-make')); return; }
+    var box = player.querySelector('#g-score');
+    if (el.classList.contains('g-trophy') && box && !box.hidden && box.querySelector('.g-board')) { box.hidden = true; return; }
+    showBoard(g);
+  });
+
+  /* Пришли по ссылке «побей мой рекорд»: показываем вызов на карточке игры. */
+  function openDuel(code) {
+    if (!COUNTS || !/^[A-Za-z0-9]{8,12}$/.test(code)) return;
+    fetch(COUNTS + '/duel/' + code).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d || !d.ok) return;
+      duel = { code: code, game: d.game, score: d.score, name: d.name, lower: d.lower };
+      drawDuel();
+      toast((d.name || 'A friend') + ' challenged you: beat ' + num(d.score));
+    }).catch(function () {});
+  }
+  function drawDuel() {
+    if (!duel) return;
+    [].forEach.call(document.querySelectorAll('.g-slide[data-id="' + duel.game + '"] .g-info'), function (info) {
+      if (info.querySelector('.g-duel')) return;
+      info.insertAdjacentHTML('afterbegin', '<p class="g-duel">' + esc(duel.name || 'A friend') + ' scored <b>' +
+        num(duel.score) + '</b> &mdash; ' + (duel.lower ? 'go faster' : 'beat it') + '</p>');
+    });
   }
 
   /* ── события ─────────────────────────────────────────── */
@@ -2530,6 +2704,8 @@
       if (authNote) authToast();
       var listCode = START.get('list');
       if (listCode) openList(listCode);
+      var duelCode = START.get('duel');
+      if (duelCode) openDuel(duelCode);
       /* Счётчики приезжают следом и ничего не ломают, если не приехали:
          лента к этому моменту уже стоит на экране. */
       loadLiked();

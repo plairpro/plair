@@ -71,3 +71,10 @@ CREATE INDEX IF NOT EXISTS acts_today_day ON acts_today (day);
 -- ALTER TABLE submissions ADD COLUMN weight INTEGER;
 -- Чем автор доказал, что игра его: github / code / moderator.
 -- ALTER TABLE submissions ADD COLUMN proof TEXT;
+
+-- PLAIR SDK: лучший счёт игрока в игре (who = аккаунт или 'v:'+номер браузера),
+-- сторона «меньше — лучше» для игры и ссылки «побей мой рекорд».
+CREATE TABLE IF NOT EXISTS scores (game TEXT NOT NULL, who TEXT NOT NULL, best REAL NOT NULL, name TEXT, updated INTEGER NOT NULL, PRIMARY KEY (game, who));
+CREATE INDEX IF NOT EXISTS scores_board ON scores (game, best);
+CREATE TABLE IF NOT EXISTS boards (game TEXT PRIMARY KEY, lower INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS duels (code TEXT PRIMARY KEY, game TEXT NOT NULL, score REAL NOT NULL, name TEXT, lower INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL);
