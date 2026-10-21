@@ -584,13 +584,8 @@
 
       '<h4>How the feed is ordered</h4>' +
       '<p><b>New</b> is the default: whatever was added last comes first. ' +
-      '<b>Popular</b> scores each game as</p>' +
-      '<p><code>plays + minutes played + 5 &times; likes + 8 &times; comments + 10 &times; shares + 10 &times; saves</code></p>' +
-      '<p>The ladder follows what each action costs a player: a launch is one tap, staying is a minute ' +
-      'of their evening, a like is a decision, a comment needs writing something, and sharing or saving ' +
-      'means they want to come back or bring a friend. Age is deliberately not in the formula.</p>' +
-      '<p class="g-hint">From one browser, a game gets at most ten launches, thirty minutes and one share ' +
-        'a day; a like or a save counts once per person. Reloading does not push a game up.</p>' +
+      '<b>Popular</b> puts first the games people stay in, like, talk about, share and save. ' +
+      'Age does not matter, and reloading the page does not push a game up.</p>' +
 
       '<h4>Who runs this</h4>' +
       '<p>PLAIR Games is made by PLAIR, a studio that builds games for brands, events and ' +
