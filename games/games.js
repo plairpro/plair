@@ -161,11 +161,26 @@
   function clockStart(g) {
     clockStop();
     if (!COUNTS || !g || !g.id) return;
-    clock = { g: g, acc: 0, last: document.visibilityState === 'hidden' ? 0 : Date.now() };
+    clock = { g: g, acc: 0, began: Date.now(), last: document.visibilityState === 'hidden' ? 0 : Date.now() };
     clock.timer = setInterval(function () { clockRun(); clockSend(false); }, 15000);
   }
-  function clockStop() {
+  /* Скип: игру закрыли быстрее 10 секунд после запуска. Считаем один раз
+     в сутки с браузера на игру, как и на сервере. */
+  function countSkip(g) {
+    if (!COUNTS || !g || !g.id) return;
+    var key = 'plair-skipped', day = new Date().toISOString().slice(0, 10), box = {};
+    try { box = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch (e) {}
+    if (box.day !== day) box = { day: day, ids: {} };
+    if (box.ids[g.id]) return;
+    box.ids[g.id] = 1;
+    try { localStorage.setItem(key, JSON.stringify(box)); } catch (e) {}
+    g.skips = (Number(g.skips) || 0) + 1;
+    ping('/skip', { id: g.id, visitor: visitor() });
+  }
+
+  function clockStop(closed) {
     if (!clock) return;
+    if (closed && Date.now() - clock.began < 10000) countSkip(clock.g);
     clockRun(); clockSend(true);
     clearInterval(clock.timer);
     clock = null;
@@ -186,7 +201,7 @@
           var c = d.counts[g.id];
           if (!c) return;
           g.plays = c.plays; g.likes = c.likes; g.comments = c.comments;
-          g.shares = c.shares || 0; g.saves = c.saves || 0; g.seconds = c.seconds || 0;
+          g.shares = c.shares || 0; g.saves = c.saves || 0; g.seconds = c.seconds || 0; g.skips = c.skips || 0;
           drawNums(g); drawLike(g);
         });
         return true;
@@ -196,13 +211,13 @@
 
   /* Популярность: чем дороже игроку действие, тем больше оно весит.
      запуск 1 · минута в игре 1 · лайк 5 · комментарий 8 ·
-     репост 10 · сохранение 10. */
-  var WEIGHT = { plays: 1, minutes: 1, likes: 5, comments: 8, shares: 10, saves: 10 };
+     репост 10 · сохранение 10. Скип — закрыли быстрее 10 секунд — минус 2. */
+  var WEIGHT = { plays: 1, minutes: 1, likes: 5, comments: 8, shares: 10, saves: 10, skips: -2 };
   function score(g) {
     var n = function (k) { return Number(g[k]) || 0; };
     return WEIGHT.plays * n('plays') + WEIGHT.minutes * n('seconds') / 60 +
       WEIGHT.likes * n('likes') + WEIGHT.comments * n('comments') +
-      WEIGHT.shares * n('shares') + WEIGHT.saves * n('saves');
+      WEIGHT.shares * n('shares') + WEIGHT.saves * n('saves') + WEIGHT.skips * n('skips');
   }
 
   function byDate(a, b) { return String(b.added).localeCompare(String(a.added)); }
@@ -2192,7 +2207,7 @@
     if (!player) return;
     try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {}
     if (wake) { try { wake.release(); } catch (e) {} wake = null; }
-    clockStop();
+    clockStop(true);
     killFrames(player);
     player.remove();
     player = null;
@@ -2378,7 +2393,7 @@
     fetchGames().then(function (list) {
       list.forEach(function (g) {
         var old = games.filter(function (o) { return o.id === g.id; })[0];
-        if (old) ['plays', 'likes', 'comments', 'saves', 'shares', 'seconds'].forEach(function (k) { g[k] = old[k]; });
+        if (old) ['plays', 'likes', 'comments', 'saves', 'shares', 'seconds', 'skips'].forEach(function (k) { g[k] = old[k]; });
       });
       games = list;
       renderFilters();

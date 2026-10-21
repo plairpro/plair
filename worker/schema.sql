@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS games (
   likes    INTEGER NOT NULL DEFAULT 0,
   comments INTEGER NOT NULL DEFAULT 0,
   shares   INTEGER NOT NULL DEFAULT 0,   -- репосты
-  seconds  INTEGER NOT NULL DEFAULT 0    -- сколько секунд в игре провели
+  seconds  INTEGER NOT NULL DEFAULT 0,   -- сколько секунд в игре провели
+  skips    INTEGER NOT NULL DEFAULT 0    -- закрыли быстрее 10 секунд после запуска
 );
 
 -- Запуски считаются не чаще десяти раз в сутки с одного браузера на игру:

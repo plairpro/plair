@@ -514,7 +514,6 @@ async function readList(env, origin, code) {
 
 /* ── счётчики ──────────────────────────────────────────── */
 
-const SHARES_A_DAY = 1;       // репостов одной игры с браузера в сутки
 const SECONDS_A_CALL = 60;    // секунд в игре за один запрос
 const SECONDS_A_DAY = 1800;   // секунд одной игры с браузера в сутки
 
@@ -546,13 +545,14 @@ async function counters(env, origin, ctx, url, body) {
     return reply(env, origin, { ok: true, counted: true, plays: (cur && cur.plays) || 0 });
   }
 
-  if (url.pathname === '/share' || url.pathname === '/time') {
-    const share = url.pathname === '/share';
-    const kind = share ? 'share' : 'time';
-    // Репост засчитываем один в сутки с браузера на игру. Время — кусками
-    // не больше минуты за запрос и не больше получаса в сутки.
-    const want = share ? 1 : Math.floor(Number(body.seconds) || 0);
-    const cap = share ? SHARES_A_DAY : SECONDS_A_DAY;
+  if (url.pathname === '/share' || url.pathname === '/time' || url.pathname === '/skip') {
+    const kind = url.pathname.slice(1);
+    const once = kind !== 'time';
+    // Репост и скип (закрыл игру быстрее 10 секунд) засчитываем один раз
+    // в сутки с браузера на игру — так чужую игру не утопить, закрывая её
+    // раз за разом. Время — кусками до минуты, не больше получаса в сутки.
+    const want = once ? 1 : Math.floor(Number(body.seconds) || 0);
+    const cap = once ? 1 : SECONDS_A_DAY;
     if (!(want > 0)) return reply(env, origin, { ok: false, why: 'bad' }, { status: 400 });
     const day = today();
     const row = await env.DB
@@ -560,7 +560,7 @@ async function counters(env, origin, ctx, url, body) {
       .bind(visitor, id, day, kind).first();
     const add = Math.min(want, SECONDS_A_CALL, cap - ((row && row.n) || 0));
     if (add > 0) {
-      const col = share ? 'shares' : 'seconds';
+      const col = { share: 'shares', time: 'seconds', skip: 'skips' }[kind];
       await env.DB.batch([
         env.DB.prepare('INSERT INTO games (id, ' + col + ') VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET ' +
           col + ' = ' + col + ' + excluded.' + col).bind(id, add),
@@ -637,6 +637,7 @@ function install(env) {
       // Репосты и время в игре появились позже — тоже добавляем при надобности.
       .then(() => env.DB.prepare('ALTER TABLE games ADD COLUMN shares INTEGER NOT NULL DEFAULT 0').run().catch(() => {}))
       .then(() => env.DB.prepare('ALTER TABLE games ADD COLUMN seconds INTEGER NOT NULL DEFAULT 0').run().catch(() => {}))
+      .then(() => env.DB.prepare('ALTER TABLE games ADD COLUMN skips INTEGER NOT NULL DEFAULT 0').run().catch(() => {}))
       // Вес присланной игры в байтах — тоже появился позже.
       .then(() => env.DB.prepare('ALTER TABLE submissions ADD COLUMN weight INTEGER').run().catch(() => {}))
       // Чем автор доказал, что игра его: github / code / moderator.
@@ -915,13 +916,13 @@ export default {
 
       if (m === 'GET' && path === '/counts') {
         const [g, sv] = await env.DB.batch([
-          env.DB.prepare('SELECT id, plays, likes, comments, shares, seconds FROM games'),
+          env.DB.prepare('SELECT id, plays, likes, comments, shares, seconds, skips FROM games'),
           env.DB.prepare('SELECT game, COUNT(*) AS n FROM saves GROUP BY game')
         ]);
         const counts = {};
-        const one = (id) => counts[id] || (counts[id] = { plays: 0, likes: 0, comments: 0, shares: 0, seconds: 0, saves: 0 });
+        const one = (id) => counts[id] || (counts[id] = { plays: 0, likes: 0, comments: 0, shares: 0, seconds: 0, saves: 0, skips: 0 });
         for (const r of g.results || []) {
-          Object.assign(one(r.id), { plays: r.plays, likes: r.likes, comments: r.comments, shares: r.shares || 0, seconds: r.seconds || 0 });
+          Object.assign(one(r.id), { plays: r.plays, likes: r.likes, comments: r.comments, shares: r.shares || 0, seconds: r.seconds || 0, skips: r.skips || 0 });
         }
         for (const r of sv.results || []) one(r.game).saves = r.n;
         return reply(env, origin, { ok: true, counts }, { headers: { 'Cache-Control': 'public, max-age=60' } });
@@ -955,7 +956,7 @@ export default {
       const del = path.match(/^\/comments\/(\d{1,12})$/);
       if (del && m === 'DELETE') return deleteComment(env, origin, await who(env, request), Number(del[1]));
 
-      if (m === 'POST' && /^\/(play|like|share|time)$/.test(path)) {
+      if (m === 'POST' && /^\/(play|like|share|time|skip)$/.test(path)) {
         // Время в игре при закрытии вкладки приходит через sendBeacon —
         // текстом, без заголовка JSON. Читаем тело в любом виде.
         let body = null;
