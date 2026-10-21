@@ -610,8 +610,9 @@
       '<h4 id="how-scores">Scores and challenges</h4>' +
       '<p><b>For players.</b> In games that support it, finish a round and your score appears at the top: your best, ' +
         'your place on the leaderboard and <b>Challenge a friend</b> &mdash; a link that opens the same game with your ' +
-        'score to beat. Only your best score counts. Sign in with Google to show your name; otherwise you are ' +
-        '&ldquo;Guest&rdquo;. Obviously faked scores are removed.</p>' +
+        'score to beat. Scores are saved for players signed in with Google: only your best counts, under your name. ' +
+        'Without signing in you still see the round&rsquo;s score and can challenge a friend. ' +
+        'Obviously faked scores are removed.</p>' +
       '<p><b>For developers</b> &mdash; optional, two lines. Add the script to <code>&lt;head&gt;</code>, next to the ' +
         '<code>plair-verify</code> line:</p>' +
       '<div class="g-own-code"><code>' + SDK_LINE + '</code><button type="button" class="g-link" data-sdk-copy>Copy</button></div>' +
@@ -1170,6 +1171,7 @@
         meUser = d.user;
         drawWho();
         toast('Signed in with GitHub as @' + (d.user.login || d.user.name));
+        flushScores();
         checkOwner(dv.for);
         return;
       }
@@ -2068,6 +2070,7 @@
       loadPending();
       loadSaves();
       toast('Signed in as ' + d.user.name);
+      setTimeout(flushScores, 1200);
     }).catch(function () { toast('Sign-in did not go through. Try again.'); });
   }
 
@@ -2370,6 +2373,7 @@
       return;
     }
     if (!COUNTS || !g || !g.id) return;
+    if (!meUser) { guestScore(g, v, lower); return; }
     api('/score', { method: 'POST', body: { id: g.id, visitor: visitor(), value: v, lower: lower } }).then(function (d) {
       if (!d.ok || !player || player.__g !== g) return;
       var head = '';
@@ -2382,8 +2386,7 @@
       try {
         if (!localStorage.getItem('plair-score-hint')) {
           localStorage.setItem('plair-score-hint', '1');
-          hint = '<p class="g-score-note">Only your best score counts. ' +
-            (meUser ? '' : 'Sign in to show your name on the board.') + '</p>';
+          hint = '<p class="g-score-note">Only your best score counts.</p>';
         }
       } catch (e) {}
       scorePanel((head ? '<p class="g-score-h' + (/beat|best/i.test(head) && head.indexOf('try') === -1 ? ' good' : '') + '">' + head + '</p>' : '') +
@@ -2392,6 +2395,39 @@
         '<div class="g-score-acts"><button class="g-c-post" type="button" data-duel-make="' + esc(String(d.best)) + '">Challenge a friend</button>' +
         '<button class="g-link" type="button" data-board>Leaderboard</button></div>' + hint, 9000);
     }).catch(function () {});
+  }
+
+  /* Гость: счёт партии видно, вызов другу работает, но записываем рекорд
+     только после входа. Лучший счёт до входа помним в этой вкладке и
+     отправляем, как только человек войдёт. */
+  var PENDING_KEY = 'plair-pending-scores';
+  function pendingScores() { try { return JSON.parse(sessionStorage.getItem(PENDING_KEY) || '{}') || {}; } catch (e) { return {}; } }
+  function guestScore(g, v, lower) {
+    var all = pendingScores(), was = all[g.id];
+    if (!was || (lower ? v < was.v : v > was.v)) all[g.id] = { v: v, lower: lower };
+    try { sessionStorage.setItem(PENDING_KEY, JSON.stringify(all)); } catch (e) {}
+    var best = all[g.id].v, head = '';
+    if (duel && duel.game === g.id) {
+      var won = lower ? v < duel.score : v > duel.score;
+      head = won ? 'You beat ' + esc(duel.name || 'your friend') + '&rsquo;s ' + num(duel.score) + '!'
+        : num(duel.score) + ' to beat ' + esc(duel.name || 'your friend') + ' &mdash; try again';
+    }
+    scorePanel((head ? '<p class="g-score-h' + (head.indexOf('try') === -1 ? ' good' : '') + '">' + head + '</p>' : '') +
+      '<p class="g-score-big">' + num(v) + '</p>' +
+      '<p class="g-score-note">Sign in with Google to save your best and get on the leaderboard.</p>' +
+      '<div class="g-score-acts"><button class="g-c-post" type="button" data-score-signin>Sign in to save</button>' +
+      '<button class="g-link" type="button" data-duel-make="' + esc(String(best)) + '">Challenge a friend</button></div>', 12000);
+  }
+  function flushScores() {
+    if (!meUser || !COUNTS) return;
+    var all = pendingScores(), ids = Object.keys(all);
+    if (!ids.length) return;
+    try { sessionStorage.removeItem(PENDING_KEY); } catch (e) {}
+    ids.forEach(function (id) {
+      api('/score', { method: 'POST', body: { id: id, visitor: visitor(), value: all[id].v, lower: all[id].lower } })
+        .catch(function () {});
+    });
+    toast('Your score is saved');
   }
 
   function showBoard(g) {
@@ -2406,8 +2442,9 @@
         ? '<li class="is-me"><span>' + d.mine.rank + '</span><b>You</b><i>' + num(d.mine.best) + '</i></li>' : '';
       scorePanel('<p class="g-score-h">Leaderboard &middot; ' + d.total + (d.total === 1 ? ' player' : ' players') + '</p>' +
         (rows ? '<ol class="g-board">' + rows + me + '</ol>' : '<p class="g-score-note">No scores yet &mdash; finish a round to be first.</p>') +
-        '<p class="g-score-note">' + (d.lower ? 'Lower is better. ' : '') + 'Best score per player. ' +
-          (meUser ? '' : 'Sign in to show your name instead of “Guest”.') + '</p>');
+        '<p class="g-score-note">' + (d.lower ? 'Lower is better. ' : '') + 'Best score per signed-in player.' +
+          (meUser ? '' : ' Sign in with Google to get on the board.') + '</p>' +
+        (meUser ? '' : '<div class="g-score-acts"><button class="g-c-post" type="button" data-score-signin>Sign in</button></div>'));
     }).catch(function () { scorePanel('<p class="g-score-note bad">The leaderboard did not load.</p>', 4000); });
   }
 
@@ -2427,9 +2464,14 @@
   }
 
   document.addEventListener('click', function (e) {
-    var el = e.target.closest && e.target.closest('[data-board],[data-duel-make],[data-score-close]');
+    var el = e.target.closest && e.target.closest('[data-board],[data-duel-make],[data-score-close],[data-score-signin]');
     if (!el || !player) return;
     var g = player.__g;
+    if (el.hasAttribute('data-score-signin')) {
+      quit();
+      accountSheet('Sign in to save your best scores and get on leaderboards.');
+      return;
+    }
     if (el.hasAttribute('data-score-close')) { player.querySelector('#g-score').hidden = true; return; }
     if (el.hasAttribute('data-duel-make')) { makeDuel(g, el.getAttribute('data-duel-make')); return; }
     var box = player.querySelector('#g-score');
@@ -2673,6 +2715,7 @@
   loadMe().then(function () {
     drawWho();
     loadSaves();
+    flushScores();
     loadPending().then(function () {
       // Ссылка из уведомления о новой игре: сразу открыть очередь.
       if (START.get('review') === '1') {

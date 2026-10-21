@@ -656,8 +656,9 @@ async function counters(env, origin, ctx, url, body) {
 
 /* ── рекорды и дуэли (PLAIR SDK) ─────────────────────── */
 /* Счёт присылает сама игра через sdk.js, лента передаёт его сюда.
-   Храним только лучший результат игрока; гость — по номеру браузера,
-   вошедший — по аккаунту, с именем в таблице. Счёт можно подделать в
+   Записываем только вошедших: лучший результат на аккаунт, с именем в
+   таблице. Гость видит счёт партии и может позвать друга, но в таблицу
+   не попадает. Счёт можно подделать в
    любой браузерной игре, поэтому лимиты и ручная чистка модератором. */
 const SCORES_A_DAY = 60;       // отправок счёта с браузера на игру в сутки
 const DUELS_A_DAY = 20;        // ссылок «побей мой рекорд» с браузера в сутки
@@ -672,10 +673,11 @@ async function dayCount(env, visitor, game, kind, cap) {
     'ON CONFLICT(visitor, game, day, kind) DO UPDATE SET n = n + 1').bind(visitor, game, day, kind).run();
   return true;
 }
-function guestName(who) { return 'Guest ' + String(who).slice(-4).toUpperCase(); }
 function better(lower) { return lower ? '<' : '>'; }
 
 async function postScore(env, origin, me, body) {
+  if (!me) return reply(env, origin, { ok: false, why: 'signin' }, { status: 401 });
+  if (me.banned) return reply(env, origin, { ok: false, why: 'banned' }, { status: 403 });
   const id = body && String(body.id || ''), visitor = body && String(body.visitor || '');
   const value = Number(body && body.value);
   if (!ID.test(id) || !VISITOR.test(visitor) || !Number.isFinite(value) || Math.abs(value) > 1e12) {
@@ -686,13 +688,13 @@ async function postScore(env, origin, me, body) {
   // Сторону «чем меньше, тем лучше» задаёт первый присланный счёт игры.
   await env.DB.prepare('INSERT OR IGNORE INTO boards (game, lower) VALUES (?, ?)').bind(id, body.lower ? 1 : 0).run();
   const lower = ((await env.DB.prepare('SELECT lower FROM boards WHERE game = ?').bind(id).first()) || {}).lower === 1;
-  const who = me ? me.id : 'v:' + visitor;
+  const who = me.id;
   const old = await env.DB.prepare('SELECT best FROM scores WHERE game = ? AND who = ?').bind(id, who).first();
   const improved = !old || (lower ? value < old.best : value > old.best);
   if (improved) {
     await env.DB.prepare('INSERT INTO scores (game, who, best, name, updated) VALUES (?, ?, ?, ?, ?) ' +
       'ON CONFLICT(game, who) DO UPDATE SET best = excluded.best, name = excluded.name, updated = excluded.updated')
-      .bind(id, who, value, me ? me.name : null, now()).run();
+      .bind(id, who, value, me.name, now()).run();
   }
   const best = improved ? value : old.best;
   const ahead = await env.DB.prepare('SELECT COUNT(*) AS n FROM scores WHERE game = ? AND best ' + better(lower) + ' ?')
@@ -708,7 +710,7 @@ async function readBoard(env, origin, me, url) {
   const lower = ((await env.DB.prepare('SELECT lower FROM boards WHERE game = ?').bind(id).first()) || {}).lower === 1;
   const { results } = await env.DB.prepare('SELECT who, best, name FROM scores WHERE game = ? ORDER BY best ' +
     (lower ? 'ASC' : 'DESC') + ', updated ASC LIMIT ?').bind(id, BOARD_SIZE).all();
-  const mine = me ? me.id : (VISITOR.test(visitor) ? 'v:' + visitor : '');
+  const mine = me ? me.id : '';
   const total = await env.DB.prepare('SELECT COUNT(*) AS n FROM scores WHERE game = ?').bind(id).first();
   let my = null;
   if (mine) {
@@ -720,7 +722,7 @@ async function readBoard(env, origin, me, url) {
     }
   }
   return reply(env, origin, { ok: true, lower, total: (total && total.n) || 0, mine: my,
-    top: (results || []).map((r) => ({ name: r.name || guestName(r.who), best: r.best, me: r.who === mine })) });
+    top: (results || []).map((r) => ({ name: r.name || 'Player', best: r.best, me: r.who === mine })) });
 }
 
 async function makeDuel(env, origin, me, body) {
@@ -805,6 +807,8 @@ function install(env) {
       .then(() => env.DB.prepare('ALTER TABLE submissions ADD COLUMN weight INTEGER').run().catch(() => {}))
       // Чем автор доказал, что игра его: github / code / moderator.
       .then(() => env.DB.prepare('ALTER TABLE submissions ADD COLUMN proof TEXT').run().catch(() => {}))
+      // Рекорды гостей (по номеру браузера) больше не храним.
+      .then(() => env.DB.prepare("DELETE FROM scores WHERE who LIKE 'v:%'").run().catch(() => {}))
       .catch((e) => { installed = null; throw e; });
   }
   return installed;
