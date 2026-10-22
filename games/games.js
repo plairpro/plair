@@ -201,6 +201,8 @@
           var c = d.counts[g.id];
           if (!c) return;
           g.plays = c.plays; g.likes = c.likes; g.comments = c.comments;
+          if (!g.boost) g.boost = { plays: (SHOW_X.plays - 1) * (Number(c.plays) || 0),
+                                    likes: (SHOW_X.likes - 1) * (Number(c.likes) || 0) };
           g.shares = c.shares || 0; g.saves = c.saves || 0; g.seconds = c.seconds || 0; g.skips = c.skips || 0;
           drawNums(g); drawLike(g);
         });
@@ -1698,13 +1700,18 @@
 
   /* Число рядом со значком: запуски, лайки, комментарии, сохранения.
      Пишем всегда, и ноль тоже, — чтобы было видно, что тут считают. */
+  /* Витринные числа: запуски и лайки на карточке показываем ×10.
+     Прибавка считается один раз при загрузке страницы, поэтому свой лайк
+     добавляет к числу 1, а не 10. Популярность и база — по настоящим числам. */
+  var SHOW_X = { plays: 10, likes: 10 };
+  function shown(g, k) { return (Number(g[k]) || 0) + ((g.boost && g.boost[k]) || 0); }
   function numHTML(g, k) {
-    return '<span class="g-act-n" data-n="' + k + '" data-id="' + esc(g.id) + '">' + compact(g[k]) + '</span>';
+    return '<span class="g-act-n" data-n="' + k + '" data-id="' + esc(g.id) + '">' + compact(shown(g, k)) + '</span>';
   }
   function drawNums(g) {
     if (!g) return;
     [].forEach.call(document.querySelectorAll('[data-n]'), function (el) {
-      if (el.getAttribute('data-id') === g.id) el.textContent = compact(g[el.getAttribute('data-n')]);
+      if (el.getAttribute('data-id') === g.id) el.textContent = compact(shown(g, el.getAttribute('data-n')));
     });
   }
 
@@ -1715,7 +1722,7 @@
     if (!COUNTS) return '';
     var g = games[i];
     return '<button class="g-act g-plays" type="button" data-play="' + i + '" ' +
-      'aria-label="Play ' + esc(g.title) + ', ' + compact(g.plays) + ' plays">' + ICON_PLAYS + numHTML(g, 'plays') + '</button>';
+      'aria-label="Play ' + esc(g.title) + ', ' + compact(shown(g, 'plays')) + ' plays">' + ICON_PLAYS + numHTML(g, 'plays') + '</button>';
   }
 
   function talkHTML(i) {
@@ -2688,7 +2695,7 @@
     fetchGames().then(function (list) {
       list.forEach(function (g) {
         var old = games.filter(function (o) { return o.id === g.id; })[0];
-        if (old) ['plays', 'likes', 'comments', 'saves', 'shares', 'seconds', 'skips'].forEach(function (k) { g[k] = old[k]; });
+        if (old) ['plays', 'likes', 'comments', 'saves', 'shares', 'seconds', 'skips', 'boost'].forEach(function (k) { g[k] = old[k]; });
       });
       games = list;
       renderFilters();
