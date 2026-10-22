@@ -120,5 +120,19 @@
     "by": "plairpro",
     "added": "2026-09-28",
     "verified": true
+  },
+  {
+    "id": "captcha",
+    "title": "Captcha",
+    "blurb": "Prove you're human. The captcha lies.",
+    "tags": [
+      "Puzzle"
+    ],
+    "cover": "/games/covers/captcha.webp",
+    "url": "https://plairpro.github.io/captcha/",
+    "repo": "https://github.com/plairpro/captcha",
+    "by": "plairpro",
+    "added": "2026-10-22",
+    "verified": true
   }
 ]
