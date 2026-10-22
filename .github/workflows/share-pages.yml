@@ -1,0 +1,32 @@
+# Страницы для репостов (g/<id>/) для новых игр: и из games.json,
+# и одобренных через форму «+» (их отдаёт сервер). Раз в час и после
+# правок каталога; если что-то поменялось — коммитит в main.
+name: Share pages
+on:
+  push:
+    branches: [main]
+    paths: ['games/games.json', 'games/covers/**', 'tools/share-pages.py']
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: share-pages
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pillow
+      - run: python3 tools/share-pages.py --server
+      - name: Commit if changed
+        run: |
+          git add g
+          if git diff --cached --quiet; then echo "nothing new"; exit 0; fi
+          git config user.name "plair-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Страницы для репостов: обновлены"
+          git push
