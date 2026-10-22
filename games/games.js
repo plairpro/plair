@@ -558,8 +558,13 @@
   var LIMIT_BYTES = LIMIT_MB * 1024 * 1024;
   var draftUrl = '';   // ссылка из «+», пока человек читает правила
 
+  // Строка подтверждения: настоящий код, если форма его уже выдала, иначе образец.
+  function ownLine(code) { return '<meta name="plair-verify" content="' + (code || 'plair-YOUR-CODE') + '">'; }
+  function knownOwnCode() { return sub && sub.code ? sub.code : ''; }
+
   function howSheet(opts) {
     opts = opts || {};
+    var ownCode = opts.back ? knownOwnCode() : '';
     sheet('<div class="g-sheet-top"><div><h3>How it works</h3>' +
       '<p class="g-lede">Small web games by their makers. Tap a cover and play &mdash; nothing to install.</p></div>' +
       '<span class="g-sp"></span>' + X + '</div>' +
@@ -580,9 +585,13 @@
       '<ul>' +
         '<li><b>Sign in with GitHub</b> &mdash; if the game is on GitHub Pages (<code>your-name.github.io/&hellip;</code>), ' +
           'sign in as <code>your-name</code>. For a team page, you need to be a public member of that team.</li>' +
-        '<li><b>Add a code to the game</b> &mdash; works on any hosting. The form gives you a line like ' +
-          '<code>&lt;meta name="plair-verify" content="plair-&hellip;"&gt;</code>; put it inside <code>&lt;head&gt;</code> ' +
-          'of your <code>index.html</code> (or save the code as <code>plair.txt</code> next to it), publish, press <b>check again</b>.</li>' +
+        '<li><b>Add a code to the game</b> &mdash; works on any hosting. ' +
+          (ownCode ? 'Put this line inside <code>&lt;head&gt;</code> of your <code>index.html</code>:'
+            : 'Paste your game&rsquo;s link in the form to get your own code, then put this line inside ' +
+              '<code>&lt;head&gt;</code> of your <code>index.html</code>:') +
+          '<div class="g-own-code"><code>' + esc(ownLine(ownCode)) + '</code>' +
+            '<button type="button" class="g-link" data-how-own-copy>Copy</button></div>' +
+          'Or save the code as <code>plair.txt</code> next to <code>index.html</code>. Publish, then press <b>check again</b> in the form.</li>' +
       '</ul>' +
       '<p class="g-hint">Games added this way show a check mark next to the author&rsquo;s name in the feed.</p>' +
 
@@ -856,6 +865,13 @@
     }
     if (ev.target.closest && ev.target.closest('[data-sdk-copy]')) {
       copyText('<script src="https://plair.pro/sdk.js"></' + 'script>').then(function () { toast('Copied'); }, function () {});
+    }
+    var ownCopy = ev.target.closest && ev.target.closest('[data-how-own-copy]');
+    if (ownCopy) {
+      var text = ownCopy.parentNode.querySelector('code').textContent;
+      copyText(text).then(function () {
+        toast(/YOUR-CODE/.test(text) ? 'Copied — swap plair-YOUR-CODE for the code from the form' : 'Copied');
+      }, function () {});
     }
     if (ev.target.closest && ev.target.closest('[data-add-back]')) submitSheet({ url: draftUrl });
     if (ev.target.closest && ev.target.closest('[data-add-open]')) submitSheet();

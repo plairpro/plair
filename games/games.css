@@ -317,6 +317,8 @@ a.g-auth-btn{text-decoration:none}
 .g-doc b{color:var(--ink);font-weight:600}
 .g-doc code{font-size:12.5px;background:var(--surface);padding:1px 5px;border-radius:5px;
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.g-doc .g-own-code{margin:8px 0 10px}
+.g-doc .g-own-code code{background:none;padding:0;font-size:12px}
 .g-doc .g-aside{margin-top:22px;padding:12px 13px;border:1px dashed var(--line-2);
   border-radius:12px;color:var(--dim);font-size:13px;line-height:1.45}
 
