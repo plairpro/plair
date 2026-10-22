@@ -1494,7 +1494,7 @@
      в мессенджере видна игра, а не сайт. Человека она сразу переводит
      в ленту на /?g=<id>, с теми же параметрами (например, ?duel=). */
   function shareURL(g, query) {
-    var host = /(^|\.)plair\.pro$/.test(location.hostname) ? location.origin : 'https://plair.pro';
+    var host = /(^|\.)plair\.pro$/.test(location.hostname) ? location.origin : 'https://www.plair.pro';
     return host + '/g/' + encodeURIComponent(g.id) + '/' + (query ? '?' + query : '');
   }
   function shareText(g) { return g.title + ' — play it on PLAIR Games'; }
@@ -2622,6 +2622,11 @@
     if (!player) killFrames(document);
     closeShares();
     warm();
+    // Ушли листанием с игры из ссылки — адрес снова просто лента.
+    if (!player && /[?&]g=/.test(location.search)) {
+      var on = slides()[current()], gq = new URLSearchParams(location.search).get('g');
+      if (on && on.dataset.id && on.dataset.id !== gq) { try { history.replaceState(history.state, '', location.pathname); } catch (e) {} }
+    }
   }
 
   addEventListener('popstate', function () { if (player) quit(); });
@@ -2715,7 +2720,14 @@
     }).catch(function () {});
   }
 
-  try { if (location.search || /^#play-/.test(location.hash)) history.replaceState(null, '', location.pathname); } catch (e) {}
+  // Служебные параметры убираем из адреса, а ?g=<id> оставляем: по нему видно,
+  // что открыта ссылка на игру, и обновление страницы вернёт к ней же.
+  try {
+    if (location.search || /^#play-/.test(location.hash)) {
+      var keepG = /^[a-z0-9-]{1,40}$/.test(START.get('g') || '') ? '?g=' + START.get('g') : '';
+      history.replaceState(null, '', location.pathname + keepG);
+    }
+  } catch (e) {}
 
   /* Логотип — «домой» без перезагрузки: все игры, «New», без поиска,
      без чужого списка, лента в начале. */
@@ -2769,7 +2781,13 @@
       var hit = want && [].filter.call(document.querySelectorAll('#feed .g-slide'), function (s) {
         return s.dataset.id === want;
       })[0];
-      if (hit) { $('feed').scrollTop = hit.offsetTop; $('feed').classList.add('is-moved'); warm(); }
+      if (hit) {
+        $('feed').scrollTop = hit.offsetTop; $('feed').classList.add('is-moved'); warm();
+        // Пришли по ссылке на игру — скажем об этом, иначе первая игра ленты
+        // выглядит как обычная главная.
+        var shared = games.filter(function (g) { return g.id === want; })[0];
+        if (shared && !START.get('duel') && START.get('c') !== '1') toast(shared.title + ' — tap Play to start');
+      }
       /* Вернулись со входа (или пришли по ссылке из уведомления):
          сразу открываем комментарии этой игры. */
       var back = want && START.get('c') === '1' &&

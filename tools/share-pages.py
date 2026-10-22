@@ -15,7 +15,9 @@
 import html, io, json, os, re, sys, urllib.request
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-SITE = 'https://plair.pro'
+# Основной адрес сайта — www (plair.pro перенаправляет сюда). Для превью
+# берём его напрямую: не все соцсети идут по перенаправлению за картинкой.
+SITE = 'https://www.plair.pro'
 SERVER = 'https://plair-counts.timurshorts.workers.dev'
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FONTS = os.path.join(ROOT, 'tools', 'fonts')
@@ -154,7 +156,6 @@ PAGE = '''<!doctype html>
 <title>{title} — play on PLAIR Games</title>
 <meta name="description" content="{desc}">
 <meta name="robots" content="noindex,follow">
-<link rel="canonical" href="{site}/?g={qid}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="PLAIR Games">
 <meta property="og:url" content="{site}/g/{id}/">
