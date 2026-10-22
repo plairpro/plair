@@ -217,7 +217,7 @@
 
 @media (min-width:760px){
   .g-slide{--pane-w:min(430px,calc((100dvh - 138px) * 0.5625))}
-  .g-pane{height:calc(100% - 138px);align-self:flex-start;margin-top:100px;
+  .g-pane{height:calc(100% - 138px);align-self:flex-start;margin-top:124px;
     border-radius:20px;box-shadow:0 0 0 1px rgba(255,255,255,.07)}
 }
 
