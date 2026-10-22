@@ -395,9 +395,43 @@
       var back = el.classList.contains('g-back');
       softImage(src + '#' + (back ? 'b' : 'f'), back ? 10 : 14, back ? 0.45 : 0.6, back ? 0.3 : 0.45)
         .then(function (url) { el.src = url; el.classList.add('is-soft'); },
-              function () { el.classList.add('is-live'); });
+              function () { el.classList.add('is-live'); })
+        .then(function () { if (back) syncBg(); });
     });
   }
+
+  /* Компьютер: фон не листается вместе с карточкой. Один неподвижный слой
+     на всю страницу, в нём два кадра — новый задник проявляется поверх
+     старого, когда карточка доехала до середины экрана. */
+  var DESK = window.matchMedia ? matchMedia('(min-width:1100px) and (hover:hover) and (pointer:fine)') : null;
+  var bgBox = null, bgSrc = null;
+  function syncBg() {
+    if (!DESK || !DESK.matches) return;
+    var slide = slides()[current()];
+    if (!slide) return;
+    var b = slide.querySelector('img.g-back');
+    var ready = b && (b.classList.contains('is-soft') || b.classList.contains('is-live'));
+    var src = ready ? b.src : '';
+    if (b && !ready) return;          // задник ещё готовится — дождёмся его
+    if (src === bgSrc) return;
+    bgSrc = src;
+    if (!bgBox) {
+      bgBox = document.createElement('div');
+      bgBox.className = 'g-stage-bg';
+      bgBox.setAttribute('aria-hidden', 'true');
+      bgBox.innerHTML = '<img alt=""><img alt="">';
+      document.body.insertBefore(bgBox, document.body.firstChild);
+    }
+    var on = bgBox.querySelector('img.is-on');
+    var next = on && on.nextElementSibling ? on.nextElementSibling : bgBox.firstChild;
+    if (on === next) next = bgBox.lastChild;
+    if (on) on.classList.remove('is-on');
+    if (!src) return;
+    next.classList.toggle('is-live', b.classList.contains('is-live'));
+    var show = function () { if (bgSrc === src) next.classList.add('is-on'); };
+    if (next.src === src) show(); else { next.onload = show; next.src = src; }
+  }
+  if (DESK && DESK.addEventListener) DESK.addEventListener('change', function () { bgSrc = null; syncBg(); });
 
   /* Сколько жанров влезает в одну строку под описанием. Меряем в
      свёрнутом виде; если всё влезло и описание короткое, разворачивать
@@ -1521,7 +1555,7 @@
       return n[0] === 'instagram'
         ? '<button class="g-sh is-' + n[0] + '" type="button" data-insta="' + i + '" style="--n:' + k + '" ' +
             'aria-label="' + label + '" title="Instagram">' + icon + '</button>'
-        : '<a class="g-sh is-' + n[0] + '" data-g="' + i + '" href=""' + esc(shareHref(n[0], g)) + '" target="_blank" rel="noopener" ' +
+        : '<a class="g-sh is-' + n[0] + '" data-g="' + i + '" href="' + esc(shareHref(n[0], g)) + '" target="_blank" rel="noopener" ' +
             'style="--n:' + k + '" aria-label="' + label + '" title="' + n[1] + '">' + icon + '</a>';
     }).join('') +
       '<button class="g-sh is-copy" type="button" data-copy="' + i + '" style="--n:' + NETS.length + '" ' +
@@ -2613,6 +2647,7 @@
       });
       softBacks(all[i]);
     }
+    syncBg();
   }
 
   /* Подсказка «свайпни» уходит, как только лентой воспользовались. */
