@@ -435,8 +435,6 @@
   var ICON_VERIFIED = '<svg class="g-verified" viewBox="0 0 24 24" role="img" aria-label="Verified author">' +
     '<title>Verified author</title><circle cx="12" cy="12" r="10"/><path d="m7.5 12.3 3 3 6-6.3"/></svg>';
 
-  var SWIPE = '<div class="g-swipe"><svg viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6" ' +
-    'stroke-linecap="round" stroke-linejoin="round"/></svg>Swipe</div>';
 
   function renderFeed() {
     var deck = $('feed');
@@ -486,8 +484,7 @@
     }
     requestAnimationFrame(fitTags);
     setTimeout(drawDuel, 0);
-    deck.innerHTML = list.map(function (g, pos) { return slideHTML(g, games.indexOf(g), pos); }).join('') +
-      (list.length > 1 ? SWIPE : '');
+    deck.innerHTML = list.map(function (g, pos) { return slideHTML(g, games.indexOf(g), pos); }).join('');
     deck.scrollTop = 0;
     warm();
   }

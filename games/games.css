@@ -214,29 +214,11 @@
 .g-verified circle{fill:var(--accent)}
 .g-verified path{fill:none;stroke:var(--on-accent,#0b0f0a);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
 .g-slide .g-src{display:none}
-/* Подсказка о свайпе — только на первом экране и только до первого листания. */
-.g-swipe{position:fixed;z-index:3;left:50%;top:calc(50% + 56px);
-  transform:translateX(-50%);display:flex;flex-direction:column-reverse;align-items:center;gap:3px;
-  color:rgba(255,255,255,.7);font-size:12px;letter-spacing:.08em;text-transform:uppercase;
-  pointer-events:none;animation:g-bob 1.9s ease-in-out infinite}
-.g-swipe svg{width:16px;height:16px;stroke:currentColor;stroke-width:2;fill:none}
-.g-deck.is-moved .g-swipe{display:none}
-@keyframes g-bob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(7px)}}
 
 @media (min-width:760px){
   .g-slide{--pane-w:min(430px,calc((100dvh - 138px) * 0.5625))}
   .g-pane{height:calc(100% - 138px);align-self:flex-start;margin-top:100px;
     border-radius:20px;box-shadow:0 0 0 1px rgba(255,255,255,.07)}
-  /* Кадр на десктопе сдвинут вниз и укорочен, поэтому центр кнопки
-     считаем от кадра, а не от экрана. */
-  .g-swipe{top:calc(100px + (100dvh - 138px) / 2 + 56px)}
-}
-/* На невысоком десктопном окне кадр короткий, подпись поднимается к
-   кнопке, и подсказке просто негде встать — там она лишняя: колоду
-   листают колесом и стрелками. */
-@media (min-width:760px) and (max-height:879px){
-  .g-swipe{display:none}
-  @keyframes g-bob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(7px)}}
 }
 
 .g-empty{border:1px dashed var(--line-2);border-radius:var(--radius);padding:30px 20px;
