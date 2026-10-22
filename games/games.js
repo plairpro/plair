@@ -1343,7 +1343,7 @@
         $('a-body').innerHTML = cfg.providers && cfg.providers.indexOf('google') !== -1
           ? '<div class="g-auth"><div class="g-gbtn" id="a-google"></div></div>' +
             '<p class="g-hint">We keep only your name and picture. <a href="/privacy/" target="_blank" rel="noopener">Privacy</a></p>'
-          : '<p class="g-hint">Signing in opens soon.</p>';
+          : cfg.offline ? OFFLINE_NOTE : '<p class="g-hint">Signing in opens soon.</p>';
         var gb = $('a-google');
         if (gb) googleButton(gb);
       });
@@ -1680,13 +1680,27 @@
     }).catch(function () { return null; });
   }
 
+  /* Настройки входа с сервера. Не дозвонились (сеть режет домен сервера,
+     обрыв, таймаут) — отвечаем offline и не запоминаем: в следующий раз
+     спросим снова. «Скоро откроется» — только если сервер сам так сказал. */
   function loadCfg() {
     if (talkCfg) return Promise.resolve(talkCfg);
-    return api('/config').then(function (d) {
-      talkCfg = d.ok ? d : { providers: [], max: 500 };
+    var late = new Promise(function (_, no) { setTimeout(function () { no(new Error('timeout')); }, 9000); });
+    return Promise.race([api('/config'), late]).then(function (d) {
+      if (!d.ok) return { providers: [], max: 500, offline: true };
+      talkCfg = d;
       return talkCfg;
-    }).catch(function () { return { providers: [], max: 500 }; });
+    }).catch(function () { return { providers: [], max: 500, offline: true }; });
   }
+  document.addEventListener('click', function (e) {
+    if (!(e.target.closest && e.target.closest('[data-cfg-retry]'))) return;
+    if ($('a-body')) { $('a-body').innerHTML = '<p class="g-hint busy">Checking&hellip;</p>'; drawAccount(); }
+    if (talk && talk.s) loadCfg().then(function () { if (talk && talk.s) drawBox(); });
+    if (typeof loadCounts === 'function') loadCounts();
+  });
+  var OFFLINE_NOTE = '<p class="g-hint bad">Can&rsquo;t reach the PLAIR server from your network right now, ' +
+    'so signing in, likes and comments are off. Try another network (Wi&#8209;Fi or mobile data) or a VPN. ' +
+    '<button type="button" class="g-link" data-cfg-retry>Try again</button></p>';
 
   function authToast() {
     if (authNote === 'ok') {
@@ -2006,7 +2020,7 @@
 
           '</div><p class="g-hint">We only keep your name and picture to show next to what you write. ' +
           'No email, no password. <a href="/privacy/" target="_blank" rel="noopener">Privacy</a></p>'
-        : '<p class="g-hint">Commenting opens soon.</p>';
+        : talkCfg ? '<p class="g-hint">Commenting opens soon.</p>' : OFFLINE_NOTE;
       var gb = box.querySelector('#c-google');
       if (gb) googleButton(gb);
       return;
