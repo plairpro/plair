@@ -572,6 +572,8 @@ a.g-auth-btn{text-decoration:none}
   .g-pane{overflow:visible}
   .g-fill{inset:0;width:100%;height:100%;border-radius:20px}
   .g-shot,.g-shot.is-blank,.g-veil{border-radius:20px}
+  /* Обложка заполняет квадрат целиком: берём середину вертикальной картинки. */
+  .g-shot{object-fit:cover;object-position:50% 45%}
   /* Подписи на карточке больше нет — затемнение только лёгкое, сверху. */
   .g-veil{background:linear-gradient(180deg,rgba(6,8,6,.45) 0%,rgba(6,8,6,0) 18%)}
 
