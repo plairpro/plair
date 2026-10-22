@@ -953,6 +953,8 @@ async function submitGame(env, origin, request, ctx, me, body) {
   const cover = typeof body.cover === 'string' && /^https:\/\/\S{4,500}$/.test(body.cover) ? body.cover : null;
   const coverData = typeof body.coverData === 'string' && body.coverData.length <= MAX_COVER &&
     /^data:image\/(webp|jpeg|png);base64,[A-Za-z0-9+\/=]+$/.test(body.coverData) ? body.coverData : null;
+  // Без обложки игру не принимаем: ею игра выглядит и в ленте, и в репостах.
+  if (!cover && !coverData) return reply(env, origin, { ok: false, why: 'cover' }, { status: 400 });
   const contact = cleanName(body.contact).slice(0, 100) || null;
   // Вес игры меряет страница при вставке ссылки. Тяжелее предела — сразу
   // отказ; если измерить не вышло (сайт закрыт), решает модератор.

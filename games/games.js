@@ -577,7 +577,8 @@
       '<ol>' +
         '<li>Press the green <b>+</b> at the top and paste the link to your game ' +
           '(for example <code>name.github.io/my-game</code>).</li>' +
-        '<li>Check the title, the line about it and the cover the page found. Change anything you like.</li>' +
+        '<li>Check the title, the line about it and the cover the page found. Change anything you like. ' +
+          '<b>A cover is required</b> &mdash; without one the game cannot be sent.</li>' +
         '<li>Press <b>Send for review</b>. We look at every game by hand, usually within a day, ' +
           'and then it appears at the top of the feed.</li>' +
       '</ol>' +
@@ -612,8 +613,9 @@
       '<p class="g-hint">The size counts every file the game refers to: code, pictures, sounds, models. ' +
         'To shrink it, save pictures as WebP, sounds as short OGG or MP3, and drop files the game does not use.</p>' +
 
-      '<h4>Cover</h4>' +
-      '<p>Put <code>cover.png</code> (or .jpg/.webp) next to your game&rsquo;s <code>index.html</code> and it is ' +
+      '<h4>Cover &mdash; required</h4>' +
+      '<p>Every game needs a cover: games without one are not accepted for review. ' +
+        'It is also the picture people see when someone shares your game. Put <code>cover.png</code> (or .jpg/.webp) next to your game&rsquo;s <code>index.html</code> and it is ' +
         'picked up by itself, or upload a picture in the form. Best: upright 9:16, shot <b>inside</b> the game ' +
         'rather than on the title screen.</p>' +
       '<p class="g-hint">Some games refuse to be embedded. Those open in a separate tab instead &mdash; that is fine.</p>' +
@@ -1063,13 +1065,15 @@
         if (inspecting !== url || sub.coverData) return;
         if (i >= tries.length) {
           sub.cover = '';
-          setCover('', 'No cover found. Add a screenshot from inside the game &mdash; ' +
-            'or skip it, the card will show the first letter of the title.');
+          setCover('', 'No cover found, and a cover is required. Put <code>cover.jpg</code> next to the game ' +
+            'or upload a screenshot from inside the game &mdash; upright 9:16 looks best.', 'bad');
+          syncGo();
           return;
         }
         loadsImage(tries[i]).then(function (sz) {
           if (!sz) return next(i + 1);
           sub.cover = tries[i];
+          syncGo();
           setCover(tries[i], 'Cover found by itself.' + (sz.w > sz.h
             ? ' It is wide, so the feed shows it with soft edges &mdash; an upright 9:16 shot looks best.' : ''), 'good');
         });
@@ -1081,7 +1085,7 @@
      автор показал, что она его. */
   function syncGo() {
     var go = $('s-go');
-    if (go) go.disabled = !!(sub && ((sub.weight && sub.weight.over) || !sub.verified));
+    if (go) go.disabled = !!(sub && ((sub.weight && sub.weight.over) || !sub.verified || !(sub.cover || sub.coverData)));
   }
 
   /* «Это моя игра»: вход через GitHub (для name.github.io) или код в
@@ -1252,6 +1256,7 @@
       sub.coverData = data;
       sub.cover = '';
       setCover(data, 'Your picture, trimmed to the screen.', 'good');
+      syncGo();
     };
     im.onerror = function () { URL.revokeObjectURL(url); setCover('', 'That file is not a picture we can read.', 'bad'); };
     im.src = url;
@@ -1278,6 +1283,10 @@
       msg.className = 'g-hint bad'; msg.textContent = 'Show that the game is yours first — see just above.';
       return;
     }
+    if (!sub.cover && !sub.coverData) {
+      msg.className = 'g-hint bad'; msg.textContent = 'Add a cover first — upload a picture from inside the game.';
+      return;
+    }
     msg.className = 'g-hint busy'; msg.textContent = 'Sending…';
     api('/submit', { method: 'POST', body: {
       weight: sub.weight && !sub.weight.unknown ? sub.weight.bytes : null,
@@ -1291,6 +1300,7 @@
         msg.className = 'g-hint bad';
         msg.textContent = d.why === 'heavy' ? 'The game is over ' + LIMIT_MB + ' MB — make it lighter first.'
           : d.why === 'verify' ? 'We could not find the code on the game page yet. Publish it and check again.'
+          : d.why === 'cover' ? 'Add a cover first — upload a picture from inside the game.'
           : d.why === 'day' ? 'That is a lot of games for one day — try again tomorrow.'
           : d.why === 'busy' ? 'The review queue is full right now. Try again later.'
           : 'That did not go through. Check the link and the title.';
@@ -1479,11 +1489,13 @@
   /* Ссылка ведёт в ленту и ставит её на эту игру, но не запускает:
      звук без касания браузер всё равно не даст, а человек сперва
      хочет посмотреть, куда его позвали. */
-  /* Одна ссылка на игру везде: и в «поделиться», и в строке адреса во
-     время игры — /?g=<id> на том же домене, где открыта лента. */
-  function shareURL(g) {
+  /* Ссылка для репоста — /g/<id>/: у этой статичной страницы свои название,
+     описание и картинка игры (их собирает tools/share-pages.py), поэтому
+     в мессенджере видна игра, а не сайт. Человека она сразу переводит
+     в ленту на /?g=<id>, с теми же параметрами (например, ?duel=). */
+  function shareURL(g, query) {
     var host = /(^|\.)plair\.pro$/.test(location.hostname) ? location.origin : 'https://plair.pro';
-    return host + '/?g=' + encodeURIComponent(g.id);
+    return host + '/g/' + encodeURIComponent(g.id) + '/' + (query ? '?' + query : '');
   }
   function shareText(g) { return g.title + ' — play it on PLAIR Games'; }
 
@@ -2470,7 +2482,7 @@
   function makeDuel(g, best) {
     api('/duel', { method: 'POST', body: { id: g.id, visitor: visitor(), value: Number(best) } }).then(function (d) {
       if (!d.ok) throw new Error('duel');
-      var link = shareURL(g) + '&duel=' + d.code;
+      var link = shareURL(g, 'duel=' + d.code);
       var text = 'I scored ' + num(best) + ' in ' + g.title + ' on PLAIR — can you beat it?';
       countShare(g);
       if (navigator.share && matchMedia('(pointer:coarse)').matches) {
