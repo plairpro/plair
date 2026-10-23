@@ -547,15 +547,12 @@ a.g-auth-btn{text-decoration:none}
 
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
-/* ── компьютер: подпись слева от карточки, счётчики справа ──
-   Только на широком экране с мышью: на телефонах и планшетах (палец,
-   pointer:coarse) всё остаётся поверх карточки, как было. Разметка та
-   же — подпись по-прежнему внутри .g-pane, просто выносится за её края,
-   поэтому слои картинки обрезаем по скруглению сами. */
-/* Неподвижный фон для компьютера (syncBg в games.js): два кадра, новый
-   проявляется поверх старого. На телефоне и планшете слоя нет. */
+/* Неподвижный фон (syncBg в games.js) — везде, где карточка не во весь
+   экран: планшет и компьютер. Два кадра, новый проявляется поверх старого;
+   листается только карточка. На телефоне фона не видно — слоя нет. */
 .g-stage-bg{display:none}
-@media (min-width:1100px) and (hover:hover) and (pointer:fine){
+.g-sq{display:none}
+@media (min-width:760px){
   .g-stage-bg{display:block;position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:var(--bg)}
   .g-stage-bg img{position:absolute;inset:-40px;width:calc(100% + 80px);height:calc(100% + 80px);
     max-width:none;max-height:none;object-fit:cover;opacity:0;transition:opacity .6s ease}
@@ -564,21 +561,29 @@ a.g-auth-btn{text-decoration:none}
   .g-deck{position:relative;z-index:1;background:transparent}
   .g-slide{background:transparent}
   .g-slide .g-back{display:none}
+}
 
-  /* Карточка квадратная: сторона — высота свободного места, но так,
-     чтобы по бокам осталось место подписи и счётчикам. */
-  .g-slide{--side-gap:56px;--pane-w:min(calc(100dvh - 138px),calc(100vw - 640px))}
+/* ── широкий экран (компьютер, планшет боком): карточка квадратная,
+   подпись слева, счётчики справа. Разметка та же — подпись по-прежнему
+   внутри .g-pane, просто выносится за её края. */
+@media (min-width:1000px) and (orientation:landscape){
+  /* Сторона квадрата — высота свободного места, но так, чтобы по бокам
+     осталось место подписи и счётчикам. */
+  .g-slide{--side-gap:clamp(32px,3.6vw,56px);--pane-w:min(calc(100dvh - 138px),calc(100vw - 2 * clamp(270px,22vw,320px)))}
   .g-pane{height:var(--pane-w);margin-top:calc(100px + (100dvh - 138px - var(--pane-w)) / 2)}
   .g-pane{overflow:visible}
   .g-fill{inset:0;width:100%;height:100%;border-radius:20px}
   .g-shot,.g-shot.is-blank,.g-veil{border-radius:20px}
-  /* Обложка заполняет квадрат целиком: берём середину вертикальной картинки. */
+  /* Обложка заполняет квадрат целиком. Есть квадратная (cover-square.*) —
+     показываем её; нет — середину вертикальной. */
   .g-shot{object-fit:cover;object-position:50% 45%}
+  .g-pane.has-sq .g-shot:not(.g-sq){display:none}
+  .g-pane.has-sq .g-sq{display:block}
   /* Подписи на карточке больше нет — затемнение только лёгкое, сверху. */
   .g-veil{background:linear-gradient(180deg,rgba(6,8,6,.45) 0%,rgba(6,8,6,0) 18%)}
 
   .g-info{position:absolute;top:50%;right:calc(100% + var(--side-gap));transform:translateY(-50%);
-    width:min(360px,calc((100vw - var(--pane-w)) / 2 - var(--side-gap) - 40px));
+    width:min(360px,calc((100vw - var(--pane-w)) / 2 - var(--side-gap) - 28px));
     max-width:none;padding:0}
   .g-info h2{font-size:clamp(26px,2.2vw,34px);line-height:1.08;text-shadow:none}
   /* Места хватает — описание и все жанры видны сразу, без разворота. */

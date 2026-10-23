@@ -326,7 +326,9 @@
       : '<div class="g-shot is-blank"><span class="g-mark" aria-hidden="true">' + esc(mark) + '</span></div>';
     return '<section class="g-slide" data-id="' + esc(g.id) + '" aria-label="' + esc(g.title) + '">' +
       (g.cover ? '<img class="g-back" src="' + esc(g.cover) + '" alt="" aria-hidden="true" loading="' + lazy + '">' : '') +
-      '<div class="g-pane">' + shot + '<div class="g-veil"></div>' +
+      '<div class="g-pane' + (g.coverSquare ? ' has-sq' : '') + '">' + shot +
+        (g.coverSquare ? '<img class="g-shot g-sq" src="' + esc(g.coverSquare) + '" alt="" loading="lazy" decoding="async">' : '') +
+        '<div class="g-veil"></div>' +
         '<button class="g-go" type="button" data-play="' + i + '" ' +
           'aria-label="Play ' + esc(g.title) + '">' + ICON_PLAY + '</button>' +
         /* Подпись свёрнута: на телефоне описание и жанры съедали треть
@@ -400,10 +402,12 @@
     });
   }
 
-  /* Компьютер: фон не листается вместе с карточкой. Один неподвижный слой
-     на всю страницу, в нём два кадра — новый задник проявляется поверх
-     старого, когда карточка доехала до середины экрана. */
-  var DESK = window.matchMedia ? matchMedia('(min-width:1100px) and (hover:hover) and (pointer:fine)') : null;
+  /* Планшет и компьютер: фон не листается вместе с карточкой. Один
+     неподвижный слой на всю страницу, в нём два кадра — новый задник
+     проявляется поверх старого, когда карточка доехала до середины экрана.
+     Запросы те же, что в games.css. */
+  var DESK = window.matchMedia ? matchMedia('(min-width:760px)') : null;
+  var SQUARE = window.matchMedia ? matchMedia('(min-width:1000px) and (orientation:landscape)') : null;
   var bgBox = null, bgSrc = null;
   function syncBg() {
     if (!DESK || !DESK.matches) return;
@@ -432,6 +436,41 @@
     if (next.src === src) show(); else { next.onload = show; next.src = src; }
   }
   if (DESK && DESK.addEventListener) DESK.addEventListener('change', function () { bgSrc = null; syncBg(); });
+  if (SQUARE && SQUARE.addEventListener) SQUARE.addEventListener('change', function () { warm(); });
+
+  /* Квадратная обложка для широкого экрана. Можно указать в каталоге
+     (coverSquare), а можно просто положить cover-square.webp/.jpg/.png
+     рядом с игрой — найдём сами. Ищем, только когда карточка квадратная,
+     и для каждой игры один раз. */
+  var sqTried = {};
+  function squareCover(slide) {
+    if (!SQUARE || !SQUARE.matches || !slide) return;
+    var g = games.filter(function (x) { return x.id === slide.dataset.id; })[0];
+    if (!g || sqTried[g.id]) return;
+    sqTried[g.id] = 1;
+    var put = function (src) {
+      g.coverSquare = src;
+      [].forEach.call(document.querySelectorAll('.g-slide[data-id="' + g.id + '"] .g-pane'), function (pane) {
+        if (pane.querySelector('.g-sq')) return;
+        var im = document.createElement('img');
+        im.className = 'g-shot g-sq'; im.alt = ''; im.decoding = 'async'; im.src = src;
+        pane.insertBefore(im, pane.querySelector('.g-veil'));
+        pane.classList.add('has-sq');
+      });
+    };
+    if (g.coverSquare) { put(g.coverSquare); return; }
+    var base;
+    try { base = new URL(g.url); } catch (e) { return; }
+    if (!/^https?:$/.test(base.protocol)) return;
+    var names = ['cover-square.webp', 'cover-square.jpg', 'cover-square.png'];
+    (function next(i) {
+      if (i >= names.length) return;
+      var src = new URL(names[i], base).href, im = new Image();
+      im.onload = function () { if (im.naturalWidth > 64) put(src); else next(i + 1); };
+      im.onerror = function () { next(i + 1); };
+      im.src = src;
+    })(0);
+  }
 
   /* Сколько жанров влезает в одну строку под описанием. Меряем в
      свёрнутом виде; если всё влезло и описание короткое, разворачивать
@@ -649,6 +688,9 @@
         'It is also the picture people see when someone shares your game. Put <code>cover.png</code> (or .jpg/.webp) next to your game&rsquo;s <code>index.html</code> and it is ' +
         'picked up by itself, or upload a picture in the form. Best: upright 9:16, shot <b>inside</b> the game ' +
         'rather than on the title screen.</p>' +
+      '<p>On a computer or a tablet held sideways the card is square. Add <code>cover-square.jpg</code> ' +
+        '(or .webp/.png, 1:1, at least 1080&times;1080) next to <code>index.html</code> and it is used there; ' +
+        'without it we show the middle of your upright cover.</p>' +
       '<p class="g-hint">Some games refuse to be embedded. Those open in a separate tab instead &mdash; that is fine.</p>' +
 
       '<h4 id="how-scores">Scores and challenges</h4>' +
@@ -1524,6 +1566,12 @@
      описание и картинка игры (их собирает tools/share-pages.py), поэтому
      в мессенджере видна игра, а не сайт. Человека она сразу переводит
      в ленту на /?g=<id>, с теми же параметрами (например, ?duel=). */
+  function gamePath(id) { return '/g/' + encodeURIComponent(id) + '/'; }
+  // Игра из адреса: /g/<id>/ или старое ?g=<id>.
+  function urlGame() {
+    var m = location.pathname.match(/^\/g\/([a-z0-9-]{1,40})\/?$/);
+    return m ? m[1] : new URLSearchParams(location.search).get('g');
+  }
   function shareURL(g, query) {
     var host = /(^|\.)plair\.pro$/.test(location.hostname) ? location.origin : 'https://www.plair.pro';
     return host + '/g/' + encodeURIComponent(g.id) + '/' + (query ? '?' + query : '');
@@ -2207,7 +2255,7 @@
     if ((el = t.closest('[data-list-share]'))) { shareMyList(el); return; }
     if (!talk || !open || open !== talk.s) return;
     if ((el = t.closest('[data-signin]'))) {
-      var back = location.origin + location.pathname + '?g=' + encodeURIComponent(talk.g.id) + '&c=1';
+      var back = location.origin + '/?g=' + encodeURIComponent(talk.g.id) + '&c=1';
       location.assign(COUNTS + '/auth/' + el.dataset.signin + '?back=' + encodeURIComponent(back));
       return;
     }
@@ -2306,11 +2354,10 @@
     document.body.style.overflow = 'hidden';
     player = p;
     if (!opts.noHash) {
-      var pu = new URL(location.href);
-      pu.searchParams.set('g', g.id);
-      pu.searchParams.delete('c');
-      pu.hash = '';
-      history.pushState({ play: g.id }, '', pu.pathname + pu.search);
+      // В адресе — та же красивая ссылка, что и в «поделиться»: /g/<id>/.
+      var pq = new URLSearchParams(location.search);
+      pq.delete('g'); pq.delete('c');
+      history.pushState({ play: g.id }, '', gamePath(g.id) + (pq.toString() ? '?' + pq : ''));
     }
     if (!opts.preview) countPlay(g);
     keepAwake();
@@ -2646,6 +2693,7 @@
         im.loading = 'eager';
       });
       softBacks(all[i]);
+      squareCover(all[i]);
     }
     syncBg();
   }
@@ -2669,9 +2717,10 @@
     closeShares();
     warm();
     // Ушли листанием с игры из ссылки — адрес снова просто лента.
-    if (!player && /[?&]g=/.test(location.search)) {
-      var on = slides()[current()], gq = new URLSearchParams(location.search).get('g');
-      if (on && on.dataset.id && on.dataset.id !== gq) { try { history.replaceState(history.state, '', location.pathname); } catch (e) {} }
+    var gq = urlGame();
+    if (!player && gq) {
+      var on = slides()[current()];
+      if (on && on.dataset.id && on.dataset.id !== gq) { try { history.replaceState(history.state, '', '/'); } catch (e) {} }
     }
   }
 
@@ -2766,12 +2815,13 @@
     }).catch(function () {});
   }
 
-  // Служебные параметры убираем из адреса, а ?g=<id> оставляем: по нему видно,
-  // что открыта ссылка на игру, и обновление страницы вернёт к ней же.
+  // Служебные параметры убираем из адреса. Пришли по ссылке на игру —
+  // в адресе красивая /g/<id>/: её же видно в репостах, а обновление
+  // страницы вернёт к этой игре (страница /g/<id>/ ведёт обратно в ленту).
   try {
     if (location.search || /^#play-/.test(location.hash)) {
-      var keepG = /^[a-z0-9-]{1,40}$/.test(START.get('g') || '') ? '?g=' + START.get('g') : '';
-      history.replaceState(null, '', location.pathname + keepG);
+      var keepG = /^[a-z0-9-]{1,40}$/.test(START.get('g') || '') ? gamePath(START.get('g')) : '/';
+      history.replaceState(null, '', keepG);
     }
   } catch (e) {}
 
