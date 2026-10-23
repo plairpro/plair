@@ -263,7 +263,7 @@
   // Слушаем весь раздел, а не только ленту: после клика стрелка мыши оставляет
   // фокус на кнопке, и нажатие клавиши до ленты бы не дошло.
   const portfolio = document.getElementById('portfolio');
-  if (portfolio) portfolio.addEventListener('keydown', (event) => {
+  if (portfolio && track) portfolio.addEventListener('keydown', (event) => {
     if (event.key === 'ArrowLeft') { goTo(at - 1); event.preventDefault(); }
     if (event.key === 'ArrowRight') { goTo(at + 1); event.preventDefault(); }
     if (event.key === 'Home') { goTo(0); event.preventDefault(); }

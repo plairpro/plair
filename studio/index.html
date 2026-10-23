@@ -5,7 +5,8 @@
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;800&display=swap">
-<link rel="stylesheet" href="/styles.css?v=41"><link rel="stylesheet" href="/seo.css?v=40"><script src="/content.js?v=49" defer></script><script src="/app.js?v=44" defer></script>
+<link rel="stylesheet" href="/styles.css?v=41"><link rel="stylesheet" href="/seo.css?v=40"><script src="/content.js?v=49" defer></script><script src="/app.js?v=45" defer></script>
+<link rel="stylesheet" href="/studio/portfolio.css?v=1"><script src="/studio/portfolio.js?v=1" defer></script>
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://plair.pro/#organization","name":"PLAIR","url":"https://plair.pro/","foundingDate":"2024","foundingLocation":{"@type":"Place","name":"Иннополис"},"description":"Игровые проекты для бизнеса: промо, геймификация, выставочные и музейные интерактивы, образование."},{"@type":"WebPage","@id":"https://plair.pro/studio/#webpage","url":"https://plair.pro/studio/","name":"Разработка игр для бизнеса","description":"PLAIR — разработка игр для бизнеса: промо-игры, геймификация, интерактивы для выставок и корпоративное обучение. Изучите направления и примеры проектов.","inLanguage":"ru","isPartOf":{"@id":"https://plair.pro/#website"}},{"@type":"WebSite","@id":"https://plair.pro/#website","url":"https://plair.pro/","name":"PLAIR","inLanguage":"ru","publisher":{"@id":"https://plair.pro/#organization"}}]}</script>
 </head>
 <body><div id="intro-splash" aria-hidden="true"><div class="intro-base"></div><span class="intro-logo"></span></div><a class="skip-link" href="#main">К содержанию</a><div class="site-shell">
@@ -60,10 +61,40 @@
     <div class="section-top">
       <h2>Проекты</h2>
     </div>
-    <div class="carousel-track" id="cases" tabindex="0" role="group" aria-roledescription="карусель"
-         aria-label="Проекты студии. Листайте стрелками влево и вправо."></div>
-    <div class="carousel-dots" id="case-dots" role="tablist" aria-label="Выбор проекта"></div>
-    <p class="visually-hidden" id="case-live" role="status"></p>
+    <div class="showcase" id="studio-showcase" role="region" aria-roledescription="карусель" aria-label="Проекты студии">
+      <div class="showcase-layout">
+        <div class="showcase-info">
+          <p class="showcase-eyebrow">PLAIR / SELECTED WORKS</p>
+          <div id="showcase-copy" class="showcase-copy"></div>
+          <div class="showcase-navigation">
+            <div class="showcase-count"><span id="showcase-number">01</span><span id="showcase-total"></span></div>
+            <div class="showcase-arrows">
+              <button class="arrow" type="button" data-case-step="-1" aria-label="Предыдущий проект">↑</button>
+              <button class="arrow" type="button" data-case-step="1" aria-label="Следующий проект">↓</button>
+            </div>
+          </div>
+        </div>
+        <div class="showcase-wheel">
+          <button class="showcase-neighbor showcase-neighbor--previous" type="button" data-case-step="-1" aria-label="Предыдущий проект"></button>
+          <div class="showcase-gallery" id="showcase-gallery" role="group" aria-label="Изображения проекта">
+            <div class="showcase-spread" id="showcase-spread"></div>
+            <div class="showcase-gallery-footer">
+              <span id="showcase-frame-count"></span>
+              <button class="showcase-expand" type="button" id="showcase-expand">Смотреть крупнее <span aria-hidden="true">↗</span></button>
+            </div>
+          </div>
+          <button class="showcase-neighbor showcase-neighbor--next" type="button" data-case-step="1" aria-label="Следующий проект"></button>
+        </div>
+      </div>
+      <div class="showcase-index" id="showcase-index" aria-label="Выбор проекта"></div>
+      <p class="visually-hidden" id="showcase-status" role="status" aria-live="polite"></p>
+    </div>
+    <noscript><p><a href="/cases/">Посмотреть все проекты студии</a></p></noscript>
+    <dialog class="showcase-lightbox" id="showcase-lightbox" aria-labelledby="showcase-lightbox-title">
+      <div class="showcase-lightbox-top"><h3 id="showcase-lightbox-title"></h3><button type="button" id="showcase-close" class="arrow" aria-label="Закрыть просмотр">×</button></div>
+      <div id="showcase-lightbox-media"></div>
+      <div class="showcase-lightbox-bottom"><button type="button" class="arrow" data-image-step="-1" aria-label="Предыдущее изображение">←</button><span id="showcase-lightbox-count" role="status"></span><button type="button" class="arrow" data-image-step="1" aria-label="Следующее изображение">→</button></div>
+    </dialog>
   </section>
 
   <section class="editorial-section" id="services">
