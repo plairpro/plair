@@ -149,7 +149,6 @@
               ${entry.note ? `<p class="case-desc">${esc(entry.note)}</p>` : ''}
             </div>
             <div class="case-nav">
-              <span class="case-no">${pad(i + 1)} / ${pad(cases.length)}</span>
               <button class="arrow" type="button" data-step="-1" aria-label="Предыдущий проект"
                       aria-controls="cases">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H4m7-7-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>

@@ -85,23 +85,19 @@
 
 /* ── услуги строками (главная и внутренние) ────────────────── */
 .service-grid{display:flex;flex-direction:column}
-.service-card{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,.85fr) auto;
+.service-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.85fr) auto;
   gap:clamp(12px,2.2vw,38px);align-items:center;padding-block:clamp(18px,2.3vw,30px);
-  border-top:1px solid var(--line);counter-increment:srv;
+  border-top:1px solid var(--line);
   transition:padding-left .3s cubic-bezier(.4,0,.2,1),background .3s}
 .service-card:last-child{border-bottom:1px solid var(--line)}
-.service-card::before{content:counter(srv,decimal-leading-zero);font-family:var(--display);font-size:12px;
-  font-weight:600;color:var(--dim);letter-spacing:.1em;font-variant-numeric:tabular-nums;transition:color .25s}
 .service-card h2,.service-card h3{font-family:var(--display);font-size:clamp(19px,2.4vw,34px);font-weight:400;
   margin:0;letter-spacing:-.035em;line-height:1.05;transition:color .25s}
 .service-card p{color:var(--muted);font-size:14px;line-height:1.45;margin:0;max-width:none}
 .service-card::after{content:"";width:44px;height:44px;border-radius:50%;border:1px solid var(--line-2);
   background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23F4F5F1' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14M13 6l6 6-6 6'/%3E%3C/svg%3E") center/16px no-repeat;
   transition:border-color .25s,background-color .25s}
-.service-grid{counter-reset:srv}
 .service-card:hover,.service-card:focus-visible{padding-left:clamp(8px,1.3vw,20px);
   background:linear-gradient(90deg,rgba(52,199,89,.07),transparent 55%)}
-.service-card:hover::before,.service-card:focus-visible::before{color:var(--accent)}
 .service-card:hover::after,.service-card:focus-visible::after{border-color:var(--accent);background-color:var(--accent);
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2307120A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14M13 6l6 6-6 6'/%3E%3C/svg%3E")}
 .service-card:focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--accent)}
@@ -218,10 +214,8 @@
 .intro .text-link{margin-top:6px}
 .byline{color:var(--dim);font-size:13px;margin:0 0 26px}
 .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:clamp(16px,2.4vw,34px);
-  padding-left:0!important;list-style:none;counter-reset:step}
-.steps li{counter-increment:step;border-top:1px solid var(--line);padding-top:16px;max-width:none}
-.steps li::before{content:counter(step,decimal-leading-zero);display:block;font-family:var(--display);font-size:12px;
-  font-weight:600;color:var(--accent);letter-spacing:.1em;margin-bottom:10px}
+  padding-left:0!important;list-style:none}
+.steps li{border-top:1px solid var(--line);padding-top:16px;max-width:none}
 .steps h3{margin:0 0 8px;font-size:19px}
 details{border-top:1px solid var(--line);padding-block:18px}
 details[open]{padding-bottom:22px}
@@ -253,8 +247,9 @@ details p{margin-top:12px}
      между ними сжимаются до минимума — иначе карточка растёт на пустом. */
   .collage{padding:7px;gap:7px}
   .collage-row{gap:7px}
-  .service-card{grid-template-columns:auto minmax(0,1fr) auto;row-gap:7px}
-  .service-card p{grid-column:2/-1}
+  .service-card{grid-template-columns:minmax(0,1fr) auto;row-gap:7px}
+  .service-card::after{grid-column:2;grid-row:1}
+  .service-card p{grid-column:1/-1;grid-row:2}
   .studio{grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion:reduce){
