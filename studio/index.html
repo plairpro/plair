@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;800&display=swap">
 <link rel="stylesheet" href="/styles.css?v=41"><link rel="stylesheet" href="/seo.css?v=40"><script src="/content.js?v=49" defer></script><script src="/app.js?v=45" defer></script>
-<link rel="stylesheet" href="/studio/portfolio.css?v=1"><script src="/studio/portfolio.js?v=1" defer></script>
+<link rel="stylesheet" href="/studio/portfolio.css?v=3"><script src="/studio/portfolio.js?v=3" defer></script>
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://plair.pro/#organization","name":"PLAIR","url":"https://plair.pro/","foundingDate":"2024","foundingLocation":{"@type":"Place","name":"Иннополис"},"description":"Игровые проекты для бизнеса: промо, геймификация, выставочные и музейные интерактивы, образование."},{"@type":"WebPage","@id":"https://plair.pro/studio/#webpage","url":"https://plair.pro/studio/","name":"Разработка игр для бизнеса","description":"PLAIR — разработка игр для бизнеса: промо-игры, геймификация, интерактивы для выставок и корпоративное обучение. Изучите направления и примеры проектов.","inLanguage":"ru","isPartOf":{"@id":"https://plair.pro/#website"}},{"@type":"WebSite","@id":"https://plair.pro/#website","url":"https://plair.pro/","name":"PLAIR","inLanguage":"ru","publisher":{"@id":"https://plair.pro/#organization"}}]}</script>
 </head>
 <body><div id="intro-splash" aria-hidden="true"><div class="intro-base"></div><span class="intro-logo"></span></div><a class="skip-link" href="#main">К содержанию</a><div class="site-shell">
@@ -64,10 +64,9 @@
     <div class="showcase" id="studio-showcase" role="region" aria-roledescription="карусель" aria-label="Проекты студии">
       <div class="showcase-layout">
         <div class="showcase-info">
-          <p class="showcase-eyebrow">PLAIR / SELECTED WORKS</p>
           <div id="showcase-copy" class="showcase-copy"></div>
           <div class="showcase-navigation">
-            <div class="showcase-count"><span id="showcase-number">01</span><span id="showcase-total"></span></div>
+            <div class="showcase-count"><span id="showcase-number">1</span><span id="showcase-total"></span></div>
             <div class="showcase-arrows">
               <button class="arrow" type="button" data-case-step="-1" aria-label="Предыдущий проект">↑</button>
               <button class="arrow" type="button" data-case-step="1" aria-label="Следующий проект">↓</button>
@@ -75,18 +74,16 @@
           </div>
         </div>
         <div class="showcase-wheel">
-          <button class="showcase-neighbor showcase-neighbor--previous" type="button" data-case-step="-1" aria-label="Предыдущий проект"></button>
           <div class="showcase-gallery" id="showcase-gallery" role="group" aria-label="Изображения проекта">
             <div class="showcase-spread" id="showcase-spread"></div>
             <div class="showcase-gallery-footer">
               <span id="showcase-frame-count"></span>
-              <button class="showcase-expand" type="button" id="showcase-expand">Смотреть крупнее <span aria-hidden="true">↗</span></button>
+              <button class="showcase-autoplay" type="button" id="showcase-autoplay" aria-label="Приостановить смену изображений" aria-pressed="false"><span aria-hidden="true">Ⅱ</span></button>
             </div>
           </div>
-          <button class="showcase-neighbor showcase-neighbor--next" type="button" data-case-step="1" aria-label="Следующий проект"></button>
+          <nav class="showcase-thumbnails" id="showcase-thumbnails" aria-label="Выбор проекта"></nav>
         </div>
       </div>
-      <div class="showcase-index" id="showcase-index" aria-label="Выбор проекта"></div>
       <p class="visually-hidden" id="showcase-status" role="status" aria-live="polite"></p>
     </div>
     <noscript><p><a href="/cases/">Посмотреть все проекты студии</a></p></noscript>
