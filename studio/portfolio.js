@@ -7,18 +7,38 @@
   const $ = id => document.getElementById(id);
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const safe = value => { try { const url = new URL(value, location.href); return ['http:', 'https:'].includes(url.protocol) ? url.href : ''; } catch { return ''; } };
-  const pad = n => String(n).padStart(2, '0');
   const wrap = (n, length) => (n % length + length) % length;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-  const copy = $('showcase-copy'), spread = $('showcase-spread'), index = $('showcase-index');
+  const copy = $('showcase-copy'), spread = $('showcase-spread');
+  const gallery = $('showcase-gallery'), autoplay = $('showcase-autoplay');
   const modal = $('showcase-lightbox');
+  const thumbnails = $('showcase-thumbnails');
   let current = 0, image = 0, direction = 1, pointer = null, suppressClickUntil = 0;
   const remembered = new Map();
   const animations = new Map();
 
+  const INTERVAL = 5000;
+  const TRANSITION = 700;
+  let timer = 0, visible = false, paused = reduced.matches, keyboardFocus = false;
+  let imageChanging = false;
+  let transitioning = false, lastWheel = 0, wheelSum = 0, wheelConsumed = false;
+  root.tabIndex = -1;
+
+  function scheduleImage() {
+    clearTimeout(timer);
+    if (!visible || paused || document.hidden || modal.open || keyboardFocus || transitioning || projects[current].media.length < 2) return;
+    timer = setTimeout(() => setImage(image + 1), INTERVAL);
+  }
+  function updateAutoplay() {
+    autoplay.setAttribute('aria-pressed', String(paused));
+    autoplay.setAttribute('aria-label', paused ? 'Включить смену изображений' : 'Приостановить смену изображений');
+    autoplay.firstElementChild.textContent = paused ? '▷' : 'Ⅱ';
+    scheduleImage();
+  }
+
   function animate(element, keyframes) {
     animations.get(element)?.cancel();
-    if (!reduced.matches) animations.set(element, element.animate(keyframes, {duration:560, easing:'cubic-bezier(.22,1,.36,1)'}));
+    if (!reduced.matches) animations.set(element, element.animate(keyframes, {duration:TRANSITION, easing:'cubic-bezier(.22,1,.36,1)'}));
   }
   function mediaHTML(media, full = false) {
     const label = esc(media.alt || projects[current].title);
@@ -28,57 +48,121 @@
     const srcset = !full && /\.webp$/i.test(media.src) && widths.length ? widths.map(w => `${media.src.replace(/\.webp$/i, '')}-${w}.webp ${w}w`).concat(`${media.src} ${media.w}w`).join(', ') : '';
     return `<img src="${esc(safe(media.src))}" alt="${label}" ${srcset ? `srcset="${esc(srcset)}" sizes="(max-width:700px) 85vw, 50vw"` : ''} decoding="async">`;
   }
-  function setImage(next, focus = false) {
-    image = wrap(next, projects[current].media.length);
+  function setImage(next, focus = false, immediate = false) {
+    const total = projects[current].media.length;
+    const target = wrap(next, total);
+    if (imageChanging && !immediate) return;
+    const previous = spread.children[image];
+    const changed = target !== image;
+    const oldTransform = previous ? getComputedStyle(previous).transform : '';
+    image = target;
     remembered.set(current, image);
     [...spread.children].forEach((card, n) => {
+      const depth = wrap(n - image, total);
+      const angle = depth === 0 ? 0 : (depth % 2 ? -1 : 1) * (3 + depth * 1.5);
       card.dataset.active = String(n === image);
+      card.style.setProperty('--depth', depth);
+      card.style.setProperty('--angle', `${angle}deg`);
+      card.style.zIndex = String(total - depth);
       card.setAttribute('aria-pressed', String(n === image));
-      card.setAttribute('aria-label', `${n === image ? 'Увеличить' : 'Показать'} изображение ${n + 1}: ${projects[current].media[n].alt || projects[current].title}`);
+      card.setAttribute('aria-label', `${n === image ? 'Следующее изображение' : 'Показать изображение ' + (n + 1)}: ${projects[current].media[n].alt || projects[current].title}`);
+      card.tabIndex = n === image ? 0 : -1;
       if (focus && n === image) card.focus({preventScroll:true});
     });
-    $('showcase-frame-count').textContent = `Кадр ${pad(image + 1)} / ${pad(projects[current].media.length)}`;
+    if (changed && previous && !immediate && !reduced.matches) {
+      imageChanging = true;
+      previous.style.zIndex = String(total + 1);
+      const flight = previous.animate([
+        {transform:oldTransform,opacity:1},
+        {transform:'translate(-35%, -8%) rotate(-12deg) scale(.92)',opacity:0,offset:.65},
+        {opacity:0}
+      ], {duration:650,easing:'cubic-bezier(.22,1,.36,1)'});
+      const finish = () => { previous.style.zIndex = String(total - wrap(Number(previous.dataset.image) - image, total)); imageChanging = false; };
+      flight.finished.then(finish, finish);
+    }
+    $('showcase-frame-count').textContent = `${image + 1} / ${total}`;
     if (modal.open) renderModal();
+    scheduleImage();
   }
   function renderProject(announce = true) {
     const p = projects[current];
     copy.innerHTML = `<p class="showcase-category">${esc(p.category)}</p><h3>${esc(p.title)}</h3><p class="showcase-description">${esc(p.description)}</p>${p.note ? `<p class="showcase-note">${esc(p.note)}</p>` : ''}`;
-    $('showcase-number').textContent = pad(current + 1);
-    $('showcase-total').textContent = `/ ${pad(projects.length)}`;
-    spread.innerHTML = p.media.map((media, n) => `<button type="button" class="showcase-frame" data-image="${n}" data-number="${pad(n + 1)}" style="--stagger:${n % 2 ? 12 : -8}px">${mediaHTML(media)}</button>`).join('');
-    setImage(remembered.get(current) || 0);
-    root.querySelectorAll('.showcase-neighbor').forEach(button => {
-      const n = wrap(current + Number(button.dataset.caseStep), projects.length), entry = projects[n];
-      const preview = entry.media[0].poster || (entry.media[0].type !== 'video' ? entry.media[0].src : '');
-      button.innerHTML = `${preview ? `<img src="${esc(safe(preview))}" alt="" loading="lazy">` : ''}<span>${esc(entry.title)}</span><span class="showcase-neighbor-no">${pad(n + 1)} / ${pad(projects.length)}</span>`;
-      button.setAttribute('aria-label', `${Number(button.dataset.caseStep) < 0 ? 'Предыдущий' : 'Следующий'} проект: ${entry.title}`);
-    });
-    [...index.children].forEach((button, n) => button.setAttribute('aria-current', String(n === current)));
-    if (announce) {
-      $('showcase-status').textContent = `Проект ${current + 1} из ${projects.length}: ${p.title}. ${p.media.length} изображения.`;
-      animate(copy, [{opacity:0, transform:'translateY(12px)'},{opacity:1, transform:'translateY(0)'}]);
-      animate(spread, [{opacity:0, transform:`translateY(${direction * 42}px) rotateX(${direction * -12}deg) scale(.94)`},{opacity:1, transform:'translateY(0) rotateX(0) scale(1)'}]);
-      // Reveal only the index strip; never scroll the page to the carousel.
-      const button = index.children[current];
-      const bounds = button.getBoundingClientRect(), strip = index.getBoundingClientRect();
-      if (bounds.left < strip.left || bounds.right > strip.right) {
-        index.scrollTo({left:index.scrollLeft + bounds.left - strip.left - strip.width / 2 + bounds.width / 2, behavior:reduced.matches ? 'auto':'smooth'});
-      }
+    $('showcase-number').textContent = String(current + 1);
+    $('showcase-total').textContent = `/ ${projects.length}`;
+    spread.innerHTML = p.media.map((media, n) => `<button type="button" class="showcase-frame" data-image="${n}" >${mediaHTML(media)}</button>`).join('');
+    imageChanging = false;
+    setImage(remembered.get(current) || 0, false, true);
+    [...thumbnails.children].forEach((button, n) => button.setAttribute('aria-current', String(n === current)));
+    const thumb = thumbnails.children[current];
+    if (thumb) {
+      const item = thumb.getBoundingClientRect(), rail = thumbnails.getBoundingClientRect();
+      thumbnails.scrollTo({top:thumbnails.scrollTop + item.top - rail.top - rail.height / 2 + item.height / 2, behavior:reduced.matches ? 'auto':'smooth'});
     }
+    if (announce) $('showcase-status').textContent = `Проект ${current + 1} из ${projects.length}: ${p.title}. ${p.media.length} изображения.`;
   }
   function go(next) {
+    if (transitioning || imageChanging || wrap(next, projects.length) === current) return;
     direction = next >= current ? 1 : -1;
+    const restoreFocus = spread.contains(document.activeElement);
+    const outgoing = reduced.matches ? null : spread.cloneNode(true);
+    if (outgoing) {
+      outgoing.removeAttribute('id');
+      outgoing.setAttribute('aria-hidden', 'true');
+      outgoing.inert = true;
+      outgoing.classList.add('showcase-outgoing');
+      outgoing.style.top = `${spread.offsetTop}px`;
+      outgoing.style.height = `${spread.offsetHeight}px`;
+      gallery.append(outgoing);
+    }
+    transitioning = true;
+    clearTimeout(timer);
     current = wrap(next, projects.length);
     renderProject();
+    if (restoreFocus) root.focus({preventScroll:true});
+    animate(copy, [{opacity:0, transform:`translateY(${direction * 30}px)`},{opacity:1, transform:'translateY(0)'}]);
+    animate(spread, [{opacity:0, transform:`translateY(${direction * 100}%) rotateX(${direction * -16}deg) scale(.94)`},{opacity:1, transform:'translateY(0) rotateX(0) scale(1)'}]);
+    if (outgoing) animate(outgoing, [{opacity:1, transform:'translateY(0) scale(1)'},{opacity:0, transform:`translateY(${direction * -100}%) rotateX(${direction * 16}deg) scale(.94)`}]);
+    const finish = () => {
+      outgoing?.remove();
+      if (outgoing) animations.delete(outgoing);
+      transitioning = false;
+      scheduleImage();
+    };
+    if (reduced.matches) finish();
+    else animations.get(spread).finished.then(finish, finish);
   }
+
+  // Consume one vertical wheel gesture per project. At either end, let the
+  // page continue naturally; inertial events cannot skip several projects.
+  root.addEventListener('wheel', event => {
+    if (event.ctrlKey || event.metaKey || event.shiftKey || modal.open || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
+    const rect = gallery.getBoundingClientRect(), center = (rect.top + rect.bottom) / 2;
+    if (center < 80 || center > innerHeight - 40) return;
+    const now = performance.now();
+    if (now - lastWheel > 180) { wheelSum = 0; wheelConsumed = false; }
+    lastWheel = now;
+    if (transitioning || imageChanging || wheelConsumed) { event.preventDefault(); return; }
+    const step = Math.sign(event.deltaY);
+    if ((step < 0 && current === 0) || (step > 0 && current === projects.length - 1)) return;
+    event.preventDefault();
+    const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1);
+    if (Math.sign(wheelSum) !== step) wheelSum = 0;
+    wheelSum += delta;
+    if (Math.abs(wheelSum) >= 60) { wheelConsumed = true; go(current + step); }
+  }, {passive:false});
+
   function renderModal() {
     $('showcase-lightbox-title').textContent = projects[current].title;
     $('showcase-lightbox-media').innerHTML = mediaHTML(projects[current].media[image], true);
     $('showcase-lightbox-count').textContent = `${image + 1} / ${projects[current].media.length}`;
     modal.querySelectorAll('[data-image-step]').forEach(button => button.disabled = projects[current].media.length < 2);
   }
-  function openModal() { renderModal(); modal.showModal(); $('showcase-close').focus(); }
-  index.innerHTML = projects.map((p, n) => `<button type="button" data-case="${n}" aria-label="Проект ${n + 1}: ${esc(p.title)}" title="${esc(p.title)}">${pad(n + 1)}</button>`).join('');
+  function openModal() { clearTimeout(timer); renderModal(); modal.showModal(); $('showcase-close').focus(); }
+  thumbnails.innerHTML = projects.map((p,n) => {
+    const media = p.media[0];
+    const src = media.poster || media.src;
+    return `<button type="button" data-case="${n}" aria-label="Проект ${n + 1}: ${esc(p.title)}" title="${esc(p.title)}"><img src="${esc(safe(src))}" alt="" loading="lazy"></button>`;
+  }).join('');
   root.addEventListener('click', event => {
     if (event.target.closest('.showcase-spread') && performance.now() < suppressClickUntil) { event.preventDefault(); return; }
     const button = event.target.closest('button');
@@ -87,11 +171,12 @@
     else if (button.dataset.case !== undefined) go(Number(button.dataset.case));
     else if (button.dataset.image !== undefined) {
       const n = Number(button.dataset.image);
-      if (n === image) openModal(); else setImage(n);
-    } else if (button.id === 'showcase-expand') openModal();
+      if (n === image) setImage(image + 1); else setImage(n);
+    } else if (button === autoplay) { paused = !paused; updateAutoplay(); }
   });
   root.addEventListener('keydown', event => {
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    keyboardFocus = true; clearTimeout(timer);
     const inGallery = event.target.closest('.showcase-gallery');
     if (inGallery && ['ArrowLeft','ArrowRight'].includes(event.key)) {
       setImage(image + (event.key === 'ArrowRight' ? 1 : -1), true);
@@ -116,7 +201,7 @@
     }
   });
   $('showcase-close').addEventListener('click', () => modal.close());
-  modal.addEventListener('close', () => { $('showcase-lightbox-media').replaceChildren(); });
+  modal.addEventListener('close', () => { $('showcase-lightbox-media').replaceChildren(); scheduleImage(); });
   modal.addEventListener('click', event => {
     const button = event.target.closest('[data-image-step]');
     if (button) setImage(image + Number(button.dataset.imageStep));
@@ -125,5 +210,19 @@
     if (event.target.closest('video') || event.altKey || event.ctrlKey || event.metaKey) return;
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { setImage(image + (event.key === 'ArrowRight' ? 1 : -1)); event.preventDefault(); }
   });
+  new IntersectionObserver(entries => {
+    visible = entries[0].isIntersecting && entries[0].intersectionRatio >= .5;
+    scheduleImage();
+  }, {threshold:[0,.5]}).observe(gallery);
+  document.addEventListener('visibilitychange', scheduleImage);
+  root.addEventListener('focusin', event => {
+    if (event.target !== root && event.target.matches(':focus-visible')) { keyboardFocus = true; clearTimeout(timer); }
+  });
+  root.addEventListener('focusout', event => {
+    if (!root.contains(event.relatedTarget)) { keyboardFocus = false; scheduleImage(); }
+  });
+  root.addEventListener('pointerdown', () => { keyboardFocus = false; scheduleImage(); });
+  reduced.addEventListener('change', () => { paused = reduced.matches; updateAutoplay(); });
   renderProject(false);
+  updateAutoplay();
 })();
