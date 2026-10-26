@@ -316,6 +316,44 @@
     wireStop(logoStrip, $('logo-stop'), 'ленту логотипов');
   }
 
+  // Заголовок-«код» (seo.css, .gt): проявляем строки кода, а при наведении
+  // перебираем буквы настоящего текста, пока они не встанут на место.
+  const gt = document.querySelector('.hero h1.gt');
+  if (gt) {
+    requestAnimationFrame(() => requestAnimationFrame(() => gt.classList.add('is-in')));
+    const ABC = 'АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЭЮЯ0123456789<>/{}';
+    const still = matchMedia('(prefers-reduced-motion:reduce)').matches;
+    gt.querySelectorAll('.gt-row').forEach((row) => {
+      const out = row.querySelector('.gt-txt'), text = row.dataset.text;
+      let timer = 0;
+      const scramble = () => {
+        clearInterval(timer);
+        if (still) { out.textContent = text; return; }
+        let done = 0;
+        timer = setInterval(() => {
+          out.textContent = text.split('').map((ch, i) => (i < done || ch === ' ') ? ch : ABC[Math.floor(Math.random() * ABC.length)]).join('');
+          if (done >= text.length) clearInterval(timer);
+          done += 1 / 3;
+        }, 30);
+      };
+      const reset = () => { clearInterval(timer); out.textContent = text; };
+      row.addEventListener('mouseenter', scramble);
+      row.addEventListener('mouseleave', reset);
+      row.__show = (on) => { row.classList.toggle('is-on', on); if (on) scramble(); else reset(); };
+    });
+    // Там, где навести нечем, строки сами раскрываются по очереди.
+    if (matchMedia('(hover:none)').matches) {
+      const rows = [...gt.querySelectorAll('.gt-row')];
+      let on = false, timer = 0;
+      const flip = () => { on = !on; rows.forEach((r, i) => setTimeout(() => r.__show(on), i * 200)); };
+      new IntersectionObserver((entries) => entries.forEach((e) => {
+        clearInterval(timer);
+        if (e.isIntersecting) { timer = setInterval(flip, on ? 2600 : 2600); if (!on) setTimeout(flip, 900); }
+      }), { threshold: 0.3 }).observe(gt);
+      gt.addEventListener('click', flip);
+    }
+  }
+
   const fx = $('hero-fx');
   const hero = fx && fx.closest('.hero');
   if (fx && hero) {
