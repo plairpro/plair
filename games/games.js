@@ -13,6 +13,21 @@
 (function () {
   'use strict';
 
+  /* Кольцо фокуса — только для клавиатуры (то же, что app.js на студии).
+     Браузер оставлял зелёную рамку на логотипе и кнопках после мыши и
+     касания; styles.css прячет её, пока <html data-input="pointer">.
+     По умолчанию считаем, что пришли мышью или пальцем. */
+  (function () {
+    var root = document.documentElement;
+    var mark = function (kind) { if (root.dataset.input !== kind) root.dataset.input = kind; };
+    mark('pointer');
+    addEventListener('pointerdown', function () { mark('pointer'); }, { capture: true, passive: true });
+    addEventListener('keydown', function (e) {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === 'Tab') mark('key');
+    }, { capture: true });
+  })();
+
   var CATALOG = '/games/games.json';
   /* Адрес счётчиков — Worker на Cloudflare, см. worker/README.md.
      Пока строка пуста, лента живёт как раньше: «Популярное» совпадает
