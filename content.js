@@ -44,7 +44,7 @@ window.PLAIR_CASES = [
     id: "puteshestvie-po-rossii",
     title: "Путешествие по России",
     category: "Стенд",
-    description: "Игра для выставки «Николай II: семья и престол» в казанском Эрмитаже.",
+    description: "Игра для выставки «Николай II: семья и престол» в казанском Эрмитаже",
     media: [
       { type: "image", src: "/assets/puteshestvie-po-rossii-1.webp", w: 1919, h: 1079, alt: "Стартовый экран игры «Путешествие по России»: старинная настольная игра-бродилка от Санкт-Петербурга до Казани и кнопка «Начать путешествие»" },
       { type: "image", src: "/assets/puteshestvie-po-rossii-2.webp", w: 1919, h: 1079, alt: "Экран победы: собранные памятные монеты городов, оставшиеся билеты первого класса и время" },
@@ -56,7 +56,7 @@ window.PLAIR_CASES = [
     id: "vernye-resheniya",
     title: "Верные решения",
     category: "Web / стенд",
-    description: "Математический раннер на скорость мышления и реакции для стенда Почтатеха.",
+    description: "Математический раннер на скорость мышления и реакции для стенда Почтатеха",
     media: [
       { type: "image", src: "/assets/vernye-resheniya-1.webp", w: 2000, h: 1143, alt: "Заставка игры «Верные решения» с ровером Почтатеха на городской улице" },
       { type: "image", src: "/assets/vernye-resheniya-2.webp", w: 2000, h: 1143, alt: "Ровер едет к кубикам с ответами на пример «4 − 2» в игре «Верные решения»" },
@@ -68,8 +68,8 @@ window.PLAIR_CASES = [
     id: "gaica",
     title: "GAICA",
     category: "Хакатон / платформа",
-    description: "Международный кибер-турнир для разработчиков по созданию игровых ИИ-агентов.",
-    note: "250 участников из 3 стран, финал на РВФ.",
+    description: "Международный кибер-турнир для разработчиков по созданию игровых ИИ-агентов",
+    note: "250 участников из 3 стран, финал на РВФ",
     media: [
       { type: "image", src: "/assets/gaica-1.webp", w: 1600, h: 1067, alt: "Награждение победителей хакатона «GAICA: игровая арена ИИ» на сцене" },
       { type: "image", src: "/assets/gaica-2.webp", w: 1600, h: 1067, alt: "Участники GAICA на пуфах смотрят трансляцию матчей ИИ-агентов" },
@@ -81,7 +81,7 @@ window.PLAIR_CASES = [
     id: "innosim",
     title: "Инносим",
     category: "Web / стенд",
-    description: "Симулятор городского движения для стенда выставки Smart City.",
+    description: "Симулятор городского движения для стенда выставки Smart City",
     media: [
       { type: "image", src: "/assets/innosim-1.webp", w: 2000, h: 1033, alt: "3D-модель круглого здания с автономным такси и пешеходами в симуляторе «Инносим»" },
       { type: "image", src: "/assets/innosim-2.webp", w: 2000, h: 1036, alt: "Роботы-доставщики и беспилотный транспорт на городской улице в симуляторе «Инносим»" },
@@ -93,8 +93,8 @@ window.PLAIR_CASES = [
     id: "game-open-lab",
     title: "Game Open Lab",
     category: "Ивент",
-    description: "Всероссийская лаборатория и игрофицированный геймджем.",
-    note: "500 участников, 160 проектов, 30 топовых экспертов и блогеров в жюри.",
+    description: "Всероссийская лаборатория и игрофицированный геймджем",
+    note: "500 участников, 160 проектов, 30 топовых экспертов и блогеров в жюри",
     media: [
       { type: "image", src: "/assets/game-open-lab-1.webp", w: 1280, h: 853, alt: "Общее фото участников Game Open Lab с дипломами на фоне экрана GOL Direct" },
       { type: "image", src: "/assets/game-open-lab-2.webp", w: 1280, h: 853, alt: "Паблик-ток «Будущее игровой индустрии» в полном зале на Game Open Lab" },
@@ -106,7 +106,7 @@ window.PLAIR_CASES = [
     id: "vk-fest",
     title: "VK Fest",
     category: "Стенд",
-    description: "Интерактивный геймбус для Университета Иннополис.",
+    description: "Интерактивный геймбус для Университета Иннополис",
     media: [
       { type: "image", src: "/assets/vk-fest-1.webp", w: 1280, h: 853, alt: "Гость с геймпадом у геймбуса Университета Иннополис: игра на экране в багажнике фургона на VK Fest" },
       { type: "image", src: "/assets/vk-fest-2.webp", w: 1280, h: 853, alt: "Очередь гостей VK Fest у фургона-геймбуса Университета Иннополис" },
@@ -118,7 +118,7 @@ window.PLAIR_CASES = [
     id: "naydi-oshibku",
     title: "Найди ошибку",
     category: "Web / стенд",
-    description: "Игра на поиск ошибок в интерфейсе для Почтатеха.",
+    description: "Игра на поиск ошибок в интерфейсе для Почтатеха",
     media: [
       { type: "image", src: "/assets/naydi-oshibku-1.webp", w: 2000, h: 1124, alt: "Интерфейс отслеживания отправления со спрятанными ошибками в игре «Найди ошибку»" },
       { type: "image", src: "/assets/naydi-oshibku-2.webp", w: 2000, h: 1123, alt: "Экран регистрации участника с маскотом Почтатеха в игре «Найди ошибку»" },
@@ -130,7 +130,7 @@ window.PLAIR_CASES = [
     id: "memsbox",
     title: "Мемсбокс",
     category: "Веб / карточная",
-    description: "Карточный коллекционный лутбокс-рогалик про мемы в стиле Таро.",
+    description: "Карточный коллекционный лутбокс-рогалик про мемы в стиле Таро",
     media: [
       { type: "image", src: "/assets/memsbox-1.webp", w: 2000, h: 1143, alt: "Выпавшая карта «Капибара» в оформлении таро на синем фоне с лучами в игре «Мемсбокс»" },
       { type: "image", src: "/assets/memsbox-2.webp", w: 2000, h: 1143, alt: "Три карты в руке с бафами и дебафами в игре «Мемсбокс»" },
@@ -142,7 +142,7 @@ window.PLAIR_CASES = [
     id: "ochag",
     title: "Очаг",
     category: "Web / Mobile",
-    description: "Игра для ресторана уральской кухни.",
+    description: "Игра для ресторана уральской кухни",
     media: [
       { type: "image", src: "/assets/ochag-phone-1.webp", w: 856, h: 1712, alt: "Стартовый экран игры «Очаг»: сковорода на очаге, свечи и кнопка «Разжечь очаг»" },
       { type: "image", src: "/assets/ochag-phone-2.webp", w: 856, h: 1712, alt: "Рецепт «Ремесленный хлеб» и падающие продукты, которые нужно ловить, в игре «Очаг»" },
@@ -153,7 +153,7 @@ window.PLAIR_CASES = [
     id: "marshrut-perestroen",
     title: "Маршрут перестроен",
     category: "Web",
-    description: "Игра для промо фильма о путешествии по зимней Якутии.",
+    description: "Игра для промо фильма о путешествии по зимней Якутии",
     media: [
       { type: "image", src: "/assets/marshrut-perestroen-1.webp", w: 2000, h: 1134, alt: "Заставка «Маршрут перестроен» с автомобилем на заснеженной дороге" },
       { type: "image", src: "/assets/marshrut-perestroen-2.webp", w: 2000, h: 1138, alt: "Экран окончания поездки с пройденным расстоянием в игре «Маршрут перестроен»" },
@@ -164,7 +164,7 @@ window.PLAIR_CASES = [
     id: "hotlime",
     title: "Hotlime",
     category: "PC",
-    description: "Аркадный PvP-экшен для 2–4 игроков.",
+    description: "Аркадный PvP-экшен для 2–4 игроков",
     media: [
       { type: "image", src: "/assets/hotlime-1.webp", w: 1280, h: 720, alt: "Взрыв в офисе и двое игроков на карте в игре Hotlime" },
       { type: "image", src: "/assets/hotlime-2.webp", w: 1280, h: 720, alt: "Перестрелка во дворе с разбросанным оружием в игре Hotlime" },
@@ -175,7 +175,7 @@ window.PLAIR_CASES = [
     id: "sportivnye-vyzhivateli",
     title: "Самые спортивные выживатели",
     category: "PC",
-    description: "Игра про популяризацию ЗОЖ с брендом художницы Beco.",
+    description: "Игра про популяризацию ЗОЖ с брендом художницы Beco",
     media: [
       { type: "image", src: "/assets/sportivnye-vyzhivateli-1.webp", w: 937, h: 512, alt: "Встреча с сектантом и диалоговое окно в игре «Самые спортивные выживатели»" },
       { type: "image", src: "/assets/sportivnye-vyzhivateli-2.webp", w: 1280, h: 720, alt: "Бой с толпой противников у дома лесника в игре «Самые спортивные выживатели»" },
@@ -186,7 +186,7 @@ window.PLAIR_CASES = [
     id: "2nd-chance",
     title: "2nd Chance",
     category: "Mobile",
-    description: "Образовательная игра в жанре «алхимия» (500K+ установок).",
+    description: "Образовательная игра в жанре «алхимия» (500K+ установок)",
     media: [
       { type: "image", src: "/assets/2nd-chance-1.webp", w: 2000, h: 921, alt: "Постапокалиптическая локация для поиска предметов в игре 2nd Chance" },
       { type: "image", src: "/assets/2nd-chance-2.webp", w: 921, h: 2000, alt: "Карточка открытого элемента «Данные» в игре 2nd Chance" },
@@ -198,7 +198,7 @@ window.PLAIR_CASES = [
     id: "simple-sandbox",
     title: "Simple Sandbox 3",
     category: "Mobile",
-    description: "Геймдизайн для мобильной песочницы с 1М+ установок.",
+    description: "Геймдизайн для мобильной песочницы с 1М+ установок",
     media: [
       { type: "image", src: "/assets/simple-sandbox-1.webp", w: 1280, h: 755, alt: "Кат-сцена с персонажами и гробом в стилистике Simple Sandbox 3" },
       { type: "image", src: "/assets/simple-sandbox-2.webp", w: 1280, h: 718, alt: "Игровой автомобиль на городской улице в Simple Sandbox 3" },
@@ -209,7 +209,7 @@ window.PLAIR_CASES = [
     id: "polka-chudes",
     title: "Полка чудес",
     category: "Web / Mobile",
-    description: "Игра для федеральной сети магазинов.",
+    description: "Игра для федеральной сети магазинов",
     media: [
       { type: "image", src: "/assets/polka-chudes-1.webp", w: 1094, h: 1708, alt: "Прыгающий персонаж-медвежонок на игровой локации в «Полке чудес»" },
       { type: "image", src: "/assets/polka-chudes-2.webp", w: 1094, h: 1708, alt: "Экран награды с воздушными шарами и подарком в «Полке чудес»" },
@@ -220,7 +220,7 @@ window.PLAIR_CASES = [
     id: "tehnopark",
     title: "Геймификация технопарка",
     category: "Web",
-    description: "Разработка системы геймификации технопарков Иннополиса.",
+    description: "Разработка системы геймификации технопарков Иннополиса",
     media: [
       { type: "image", src: "/assets/tehnopark-1.webp", w: 1280, h: 853, alt: "Технопарк Иннополиса с высоты птичьего полёта с подсвеченными секторами направлений" },
       { type: "image", src: "/assets/tehnopark-2.webp", w: 1280, h: 853, alt: "Схема уровней участника с наградами и значками в системе геймификации технопарка" }
@@ -230,7 +230,7 @@ window.PLAIR_CASES = [
     id: "t-quest",
     title: "T-Quest",
     category: "Web / Mobile",
-    description: "Игра для геймификации HR-активностей Т-банка на конференциях.",
+    description: "Игра для геймификации HR-активностей Т-банка на конференциях",
     media: [
       { type: "image", src: "/assets/t-quest-1.webp", w: 751, h: 1013, alt: "Персонаж и золотистое существо на игровой локации в T-Quest"},
       { type: "image", src: "/assets/t-quest-2.webp", w: 747, h: 1015, alt: "Экран выбора стихии с командой персонажей в T-Quest" },
@@ -241,7 +241,7 @@ window.PLAIR_CASES = [
     id: "travel-quest",
     title: "Travel Quest",
     category: "Mobile",
-    description: "AR-паззл с квестами для изучения городов.",
+    description: "AR-паззл с квестами для изучения городов",
     media: [
       { type: "image", src: "/assets/travel-quest-1.webp", w: 701, h: 623, alt: "Карта с точкой квеста и список заданий в приложении Travel Quest" },
       { type: "image", src: "/assets/travel-quest-2.webp", w: 657, h: 582, alt: "Сканирование QR-кода в городе и японский кроссворд в приложении Travel Quest" },
