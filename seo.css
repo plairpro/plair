@@ -16,8 +16,8 @@
 .gt-row{position:relative;display:flex;align-items:center;height:1.08em;overflow:hidden;cursor:default;
   border-bottom:1px solid var(--line);white-space:nowrap}
 .gt-code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;letter-spacing:-.04em;
-  color:rgba(244,245,241,.08);
-  background:linear-gradient(90deg,#3d463b,#8b928b) no-repeat 0 0/0% 100%;-webkit-background-clip:text;background-clip:text;
+  color:rgba(244,245,241,.18);
+  background:linear-gradient(90deg,#9aa298,#e4e7e0) no-repeat 0 0/0% 100%;-webkit-background-clip:text;background-clip:text;
   transition:background-size 2s cubic-bezier(.22,1.4,.36,1) calc(var(--d) + .3s),opacity .6s ease var(--d),transform .6s cubic-bezier(.34,1.56,.64,1) var(--d);
   opacity:.7;transform:scale(.95);transform-origin:left center}
 .gt.is-in .gt-code{background-size:100% 100%;opacity:1;transform:none}
