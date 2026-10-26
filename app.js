@@ -316,6 +316,36 @@
     wireStop(logoStrip, $('logo-stop'), 'ленту логотипов');
   }
 
+  // «Слоёный» подзаголовок: наведение работает само (CSS). Там, где навести
+  // нечем (телефон, планшет), лента сама проезжает туда-обратно, пока видна.
+  const layered = $('hero-layered');
+  // Наклонённые строки вылезают за свою коробку вверх и вниз — меряем,
+  // насколько, и отдаём это место отступами, чтобы ничего не наезжало.
+  if (layered) {
+    const fit = () => {
+      layered.style.paddingBlock = '0px';
+      const box = layered.getBoundingClientRect();
+      let top = Infinity, bottom = -Infinity;
+      layered.querySelectorAll('li').forEach((li) => {
+        const r = li.getBoundingClientRect(); top = Math.min(top, r.top); bottom = Math.max(bottom, r.bottom);
+      });
+      layered.style.paddingTop = Math.max(0, Math.ceil(box.top - top)) + 'px';
+      layered.style.paddingBottom = Math.max(0, Math.ceil(bottom - box.bottom)) + 'px';
+    };
+    fit();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+    addEventListener('resize', fit);
+  }
+  if (layered && matchMedia('(hover:none)').matches && !matchMedia('(prefers-reduced-motion:reduce)').matches) {
+    let timer = 0;
+    const tick = () => layered.classList.toggle('is-on');
+    new IntersectionObserver((entries) => entries.forEach((e) => {
+      clearInterval(timer);
+      if (e.isIntersecting) timer = setInterval(tick, 3200);
+    }), { threshold: 0.3 }).observe(layered);
+    layered.addEventListener('click', tick);
+  }
+
   const fx = $('hero-fx');
   const hero = fx && fx.closest('.hero');
   if (fx && hero) {
