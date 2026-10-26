@@ -17,7 +17,7 @@
   const animations = new Map();
 
   const TRANSITION = 650;
-  let transitioning = false, lastWheel = 0, wheelSum = 0, wheelConsumed = false;
+  let transitioning = false;
   root.tabIndex = -1;
 
   function layoutGallery() {
@@ -97,24 +97,8 @@
     else animations.get(spread).finished.then(finish, finish);
   }
 
-  // Consume one vertical wheel gesture per project. At either end, let the
-  // page continue naturally; inertial events cannot skip several projects.
-  root.addEventListener('wheel', event => {
-    if (event.ctrlKey || event.metaKey || event.shiftKey || modal.open || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
-    const rect = gallery.getBoundingClientRect(), center = (rect.top + rect.bottom) / 2;
-    if (center < 80 || center > innerHeight - 40) return;
-    const now = performance.now();
-    if (now - lastWheel > 180) { wheelSum = 0; wheelConsumed = false; }
-    lastWheel = now;
-    if (transitioning || wheelConsumed) { event.preventDefault(); return; }
-    const step = Math.sign(event.deltaY);
-    if ((step < 0 && current === 0) || (step > 0 && current === projects.length - 1)) return;
-    event.preventDefault();
-    const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1);
-    if (Math.sign(wheelSum) !== step) wheelSum = 0;
-    wheelSum += delta;
-    if (Math.abs(wheelSum) >= 60) { wheelConsumed = true; go(current + step); }
-  }, {passive:false});
+  // Колёсико мыши больше не листает проекты — оно просто прокручивает
+  // страницу. Проекты переключаются стрелками, миниатюрами и клавиатурой.
 
   function renderModal() {
     $('showcase-lightbox-title').textContent = projects[current].title;
