@@ -1,5 +1,5 @@
 /* Preserve image order and aspect ratios; choose the fullest balanced arrangement. */
-function portfolioLayout(ratios, width, height, gap = 12) {
+function portfolioLayout(ratios, width, height, gap = 12, even = .2) {
   if (!ratios.length || width <= 0 || height <= 0) return [];
   const values = ratios.map(r => Number.isFinite(r) && r > 0 ? r : 1);
   let best = {score: -Infinity, boxes: []};
@@ -28,7 +28,9 @@ function portfolioLayout(ratios, width, height, gap = 12) {
       });
       const areas = boxes.map(b => b.width * b.height);
       // Prefer usable image area, with a penalty for making one frame tiny.
-      const score = areas.reduce((s, a) => s + a, 0) * (.8 + .2 * Math.min(...areas) / Math.max(...areas));
+      // `even` — how much equal frame sizes matter (higher on phones, where
+      // one big frame and three thumbnails look broken).
+      const score = areas.reduce((s, a) => s + a, 0) * ((1 - even) + even * Math.min(...areas) / Math.max(...areas));
       if (score > best.score + .1) best = {score, boxes};
     }
     function partition(start, groups) {

@@ -25,7 +25,8 @@
       const element = spread.children[n]?.querySelector('img,video');
       return Number(media.w) / Number(media.h) || (element?.naturalWidth / element?.naturalHeight) || (element?.videoWidth / element?.videoHeight) || 1;
     });
-    const boxes = portfolioLayout(ratios, spread.clientWidth, spread.clientHeight, innerWidth <= 700 ? 8 : 12);
+    const narrow = innerWidth <= 700;
+    const boxes = portfolioLayout(ratios, spread.clientWidth, spread.clientHeight, narrow ? 8 : 12, narrow ? .6 : .2);
     boxes.forEach((box, n) => Object.assign(spread.children[n].style, {
       left:box.x + 'px', top:box.y + 'px', width:box.width + 'px', height:box.height + 'px'
     }));
