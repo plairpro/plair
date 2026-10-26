@@ -339,19 +339,29 @@
       const reset = () => { clearInterval(timer); out.textContent = text; };
       row.addEventListener('mouseenter', scramble);
       row.addEventListener('mouseleave', reset);
-      row.__show = (on) => { row.classList.toggle('is-on', on); if (on) scramble(); else reset(); };
+      row.__show = (on) => { row.classList.toggle('is-on', on); if (on) scramble(); else if (!row.matches(':hover')) reset(); };
     });
-    // Там, где навести нечем, строки сами раскрываются по очереди.
-    if (matchMedia('(hover:none)').matches) {
-      const rows = [...gt.querySelectorAll('.gt-row')];
-      let on = false, timer = 0;
-      const flip = () => { on = !on; rows.forEach((r, i) => setTimeout(() => r.__show(on), i * 200)); };
-      new IntersectionObserver((entries) => entries.forEach((e) => {
-        clearInterval(timer);
-        if (e.isIntersecting) { timer = setInterval(flip, on ? 2600 : 2600); if (!on) setTimeout(flip, 900); }
-      }), { threshold: 0.3 }).observe(gt);
-      gt.addEventListener('click', flip);
+    // Строки сами по очереди меняются: код → текст → код, пока заголовок
+    // на экране, — чтобы было видно, что тут что-то спрятано. Пока над
+    // заголовком мышь, автосмена ждёт: строкой управляет наведение.
+    const rows = [...gt.querySelectorAll('.gt-row')];
+    let on = false, timer = 0, visible = false, hovered = false;
+    const flip = (next) => { on = next; rows.forEach((r, i) => setTimeout(() => r.__show(on), i * 220)); };
+    const loop = () => {
+      clearTimeout(timer);
+      if (!visible || hovered) return;
+      timer = setTimeout(() => { flip(!on); loop(); }, on ? 2800 : 2000);
+    };
+    new IntersectionObserver((entries) => entries.forEach((e) => {
+      visible = e.isIntersecting;
+      if (visible) { if (!on && !hovered) timer = setTimeout(() => { flip(true); loop(); }, 1200); }
+      else clearTimeout(timer);
+    }), { threshold: 0.3 }).observe(gt);
+    if (matchMedia('(hover:hover)').matches) {
+      gt.addEventListener('mouseenter', () => { hovered = true; clearTimeout(timer); flip(false); });
+      gt.addEventListener('mouseleave', () => { hovered = false; loop(); });
     }
+    gt.addEventListener('click', () => { flip(!on); loop(); });
   }
 
   const fx = $('hero-fx');
