@@ -1,5 +1,10 @@
 /* ── герой главной ─────────────────────────────────────────── */
-.hero{position:relative;padding-block:clamp(22px,4vw,56px) clamp(28px,4vw,52px);overflow:hidden}
+/* Первый экран: шапка + герой + бегущая строка ровно на высоту окна, так
+   что строка стоит внизу экрана, а «Проекты» начинаются уже за ним.
+   --chrome — высота шапки и бегущей строки, её меряет app.js. */
+.hero{position:relative;padding-block:clamp(22px,4vw,56px) clamp(28px,4vw,52px);overflow:hidden;
+  display:flex;flex-direction:column;justify-content:center;
+  min-height:calc(100vh - var(--chrome,150px));min-height:calc(100svh - var(--chrome,150px))}
 .hero::before{content:"";position:absolute;left:50%;top:-18%;width:min(1100px,120%);aspect-ratio:1;translate:-50% 0;
   background:radial-gradient(circle,rgba(52,199,89,.16),transparent 62%);pointer-events:none;z-index:-2}
 /* Сетка точек живёт над свечением и под текстом. */

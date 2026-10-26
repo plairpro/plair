@@ -364,6 +364,15 @@
     gt.addEventListener('click', () => { flip(!on); loop(); });
   }
 
+  // Высота шапки и бегущей строки — чтобы первый экран занял окно целиком.
+  {
+    const head = document.querySelector('.home-header'), tick = $('ticker');
+    const chrome = () => document.documentElement.style.setProperty('--chrome',
+      ((head ? head.offsetHeight : 0) + (tick ? tick.offsetHeight : 0)) + 'px');
+    chrome(); addEventListener('resize', chrome);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(chrome);
+  }
+
   const fx = $('hero-fx');
   const hero = fx && fx.closest('.hero');
   if (fx && hero) {
