@@ -5,6 +5,10 @@
 .hero{position:relative;padding-block:clamp(22px,4vw,56px) clamp(28px,4vw,52px);overflow:hidden;
   display:flex;flex-direction:column;justify-content:center;
   min-height:calc(100vh - var(--chrome,150px));min-height:calc(100svh - var(--chrome,150px))}
+/* Свободное место делится поровну: над заголовком и между заголовком и
+   блоком с подзаголовком — сам блок прижат книзу, к бегущей строке. */
+.hero>h1{margin-top:auto}
+.hero>.hero-grid{margin-top:auto}
 .hero::before{content:"";position:absolute;left:50%;top:-18%;width:min(1100px,120%);aspect-ratio:1;translate:-50% 0;
   background:radial-gradient(circle,rgba(52,199,89,.16),transparent 62%);pointer-events:none;z-index:-2}
 /* Сетка точек живёт над свечением и под текстом. */
