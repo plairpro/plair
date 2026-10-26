@@ -41,6 +41,18 @@ window.PLAIR_CONFIG = {
 window.PLAIR_CLIENTS = [];
 window.PLAIR_CASES = [
   {
+    id: "puteshestvie-po-rossii",
+    title: "Путешествие по России",
+    category: "Стенд",
+    description: "Игра для выставки «Николай II: семья и престол».",
+    media: [
+      { type: "image", src: "/assets/puteshestvie-po-rossii-1.webp", w: 1919, h: 1079, alt: "Стартовый экран игры «Путешествие по России»: старинная настольная игра-бродилка от Санкт-Петербурга до Казани и кнопка «Начать путешествие»" },
+      { type: "image", src: "/assets/puteshestvie-po-rossii-2.webp", w: 1919, h: 1079, alt: "Экран победы: собранные памятные монеты городов, оставшиеся билеты первого класса и время" },
+      { type: "image", src: "/assets/puteshestvie-po-rossii-3.webp", w: 1470, h: 1470, alt: "Малыш с мамой играют на сенсорном столе с игровым полем на выставке «Николай II: семья и престол»" },
+      { type: "image", src: "/assets/puteshestvie-po-rossii-4.webp", w: 1470, h: 1472, alt: "Посетители выставки у стенда с игрой: сенсорный стол под окном вагона с видом на Макарьевский монастырь" }
+    ]
+  },
+  {
     id: "vernye-resheniya",
     title: "Верные решения",
     category: "Web / стенд",
