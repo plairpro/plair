@@ -30,6 +30,9 @@
   font-family:var(--display);font-weight:800;letter-spacing:-.055em;padding-left:.04em;
   clip-path:polygon(0 50%,100% 50%,100% 50%,0 50%);transition:clip-path .4s cubic-bezier(.1,.5,.5,1);pointer-events:none}
 .gt-row:hover .gt-hover,.gt-row.is-on .gt-hover{clip-path:polygon(0 0,100% 0,100% 100%,0 100%)}
+/* Строки заходят друг на друга на 2px — иначе между двумя зелёными
+   полосами проступает тонкая тёмная щель. */
+.gt-row+.gt-row{margin-top:-2px}
 @media (prefers-reduced-motion:reduce){.gt-code,.gt-hover{transition:none}.gt-code{opacity:1;transform:none;background-size:100% 100%}}
 .hero-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,420px);gap:clamp(20px,4vw,64px);
   align-items:end;margin-top:clamp(22px,3.4vw,46px)}
