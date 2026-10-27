@@ -1845,7 +1845,7 @@
   /* Витринные числа: множитель для запусков и лайков на карточке (сейчас 1 — без прибавки).
      Прибавка считается один раз при загрузке страницы, поэтому свой лайк
      добавляет к числу 1, а не 10. Популярность и база — по настоящим числам. */
-  var SHOW_X = { plays: 1, likes: 1 };   // 1 — настоящие числа, без прибавки
+  var SHOW_X = { plays: 10, likes: 10 };
   function shown(g, k) { return (Number(g[k]) || 0) + ((g.boost && g.boost[k]) || 0); }
   function numHTML(g, k) {
     return '<span class="g-act-n" data-n="' + k + '" data-id="' + esc(g.id) + '">' + compact(shown(g, k)) + '</span>';
