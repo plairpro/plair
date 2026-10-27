@@ -1187,13 +1187,18 @@
       var d = r[0];
       // Сервер ещё старый, проверки не знает — не мешаем отправке, проверит модератор.
       if (d.status === 404 && d.why === 'no such path') { sub.verified = true; $('s-own').hidden = true; syncGo(); return; }
-      if (!d.ok) throw new Error('verify');
+      if (!d.ok) { var er = new Error('verify'); er.answered = true; throw er; }
       sub.verified = !!d.verified; sub.code = d.code || '';
       drawOwn(d, url);
-    }).catch(function () {
+    }).catch(function (er) {
       if (inspecting !== url || !$('s-own-body')) return;
-      $('s-own-body').innerHTML = '<p class="g-hint bad">Could not check right now. ' +
-        '<button type="button" class="g-link" data-own-check>Try again</button></p>';
+      // Код выдаёт наш сервер (он подписан ключом, в браузере его не посчитать).
+      // Не дозвонились — так и говорим: чаще всего сервер режет сеть игрока.
+      $('s-own-body').innerHTML = '<p class="g-hint bad">' + (er && er.answered
+        ? 'Could not check this link. Make sure it opens the game itself.'
+        : 'Our server did not answer, so we cannot give you the code yet. Your network may be blocking it &mdash; ' +
+          'try another network (Wi&#8209;Fi or mobile data) or a VPN.') +
+        ' <button type="button" class="g-link" data-own-check>Try again</button></p>';
     });
   }
 
