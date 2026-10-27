@@ -758,7 +758,9 @@
 
   const openers = Array.from(document.querySelectorAll('#contact-open,[data-contact-open]'));
   let lastOpener = null;
-  openers.forEach((button) => button.addEventListener('click', () => {
+  openers.forEach((button) => button.addEventListener('click', (event) => {
+    // Ссылка-открывашка (например, карточка услуги без своей страницы) — не прыгаем по якорю.
+    if (button.tagName === 'A') event.preventDefault();
     lastOpener = button;
     loadBot();
     lockScroll();
