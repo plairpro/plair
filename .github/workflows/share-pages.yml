@@ -7,7 +7,7 @@ on:
     branches: [main]
     paths: ['games/games.json', 'games/covers/**', 'tools/share-pages.py']
   schedule:
-    - cron: '17 * * * *'
+    - cron: '*/15 * * * *'
   workflow_dispatch:
 permissions:
   contents: write
