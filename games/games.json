@@ -134,5 +134,21 @@
     "by": "plairpro",
     "added": "2026-10-22",
     "verified": true
+  },
+  {
+    "id": "market",
+    "title": "Market",
+    "blurb": "Steer your shopping cart, collect letters, and fill your basket with fruit and vegetables on your way to the market.",
+    "tags": [
+      "Arcade",
+      "Runner",
+      "Racing"
+    ],
+    "cover": "https://plair-counts.timurshorts.workers.dev/cover/market",
+    "url": "https://plairpro.github.io/market/",
+    "repo": "https://github.com/plairpro/market",
+    "by": "plairpro",
+    "added": "2026-10-27",
+    "verified": true
   }
 ]
