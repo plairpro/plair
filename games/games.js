@@ -622,6 +622,8 @@
 
   function shut() {
     if (open) { open.remove(); open = null; }
+    // Закрыли инструкцию — адрес снова просто лента.
+    if (location.pathname === HOW_PATH) { try { history.replaceState(history.state, '', '/'); } catch (e) {} }
     if (!player) document.body.style.overflow = '';
   }
 
@@ -649,11 +651,21 @@
   function ownLine(code) { return '<meta name="plair-verify" content="' + (code || 'plair-YOUR-CODE') + '">'; }
   function knownOwnCode() { return sub && sub.code ? sub.code : ''; }
 
+  /* У инструкции свой адрес — plair.pro/how/ (статичная страница, которая
+     открывает ленту с этим окном). Пока окно открыто, он же в строке
+     адреса, и им можно поделиться кнопкой «Copy link». */
+  var HOW_PATH = '/how/';
+  function howURL() {
+    var host = /(^|\.)plair\.pro$/.test(location.hostname) ? location.origin : 'https://www.plair.pro';
+    return host + HOW_PATH;
+  }
   function howSheet(opts) {
     opts = opts || {};
     var ownCode = opts.back ? knownOwnCode() : '';
+    setTimeout(function () { try { history.replaceState(history.state, '', HOW_PATH); } catch (e) {} }, 0);
     sheet('<div class="g-sheet-top"><div><h3>How it works</h3>' +
-      '<p class="g-lede">Small web games by their makers. Tap a cover and play &mdash; nothing to install.</p></div>' +
+      '<p class="g-lede">Small web games by their makers. Tap a cover and play &mdash; nothing to install.</p>' +
+      '<p class="g-hint"><button type="button" class="g-link" data-how-link>Copy link to this guide</button></p></div>' +
       '<span class="g-sp"></span>' + X + '</div>' +
       (opts.back ? '<p class="g-back-to"><button type="button" class="g-link" data-add-back>&larr; Back to your game</button></p>' : '') +
       '<div class="g-doc">' +
@@ -967,6 +979,9 @@
     }
     if (ev.target.closest && ev.target.closest('[data-add-back]')) submitSheet({ url: draftUrl });
     if (ev.target.closest && ev.target.closest('[data-add-open]')) submitSheet();
+    if (ev.target.closest && ev.target.closest('[data-how-link]')) {
+      copyText(howURL()).then(function () { toast('Link copied'); }, function () { toast(howURL()); });
+    }
   });
 
   /* ── добавить игру ───────────────────────────────────── */
@@ -1178,7 +1193,7 @@
 
   /* «Это моя игра»: вход через GitHub (для name.github.io) или код в
      самой игре. Сервер проверяет то же самое ещё раз при отправке. */
-  function checkOwner(url) {
+  function checkOwner(url, retried) {
     var body = $('s-own-body');
     if (!body || !COUNTS) return;
     body.innerHTML = '<p class="g-hint busy">Checking&hellip;</p>';
@@ -1192,6 +1207,8 @@
       drawOwn(d, url);
     }).catch(function (er) {
       if (inspecting !== url || !$('s-own-body')) return;
+      // Сеть моргнула — пробуем ещё раз сами, прежде чем пугать человека.
+      if (!retried && !(er && er.answered)) { setTimeout(function () { checkOwner(url, true); }, 1500); return; }
       // Код выдаёт наш сервер (он подписан ключом, в браузере его не посчитать).
       // Не дозвонились — так и говорим: чаще всего сервер режет сеть игрока.
       $('s-own-body').innerHTML = '<p class="g-hint bad">' + (er && er.answered
@@ -2871,6 +2888,11 @@
   });
 
   drawWho();
+  // Открыли по ссылке на инструкцию (/how/ → /?how=1, или ?how=scores).
+  if (START.has('how')) {
+    howSheet();
+    if (START.get('how') === 'scores' && $('how-scores')) $('how-scores').scrollIntoView({ block: 'start' });
+  }
   loadMe().then(function () {
     drawWho();
     loadSaves();
