@@ -2402,7 +2402,7 @@
       (games.indexOf(g) !== -1 && !opts.preview ? shareHTML(games.indexOf(g), 'bar') : '') +
       '</div><div class="g-stage" id="stage"></div>' +
       '<div class="g-score" id="g-score" role="status" aria-live="polite" hidden></div>';
-    p.__g = g; p.__preview = !!opts.preview;
+    p.__g = g; p.__preview = !!opts.preview; p.__land = !!opts.land;
     document.body.appendChild(p);
     document.body.style.overflow = 'hidden';
     player = p;
@@ -2488,7 +2488,14 @@
     clockStop(true);
     killFrames(player);
     player.remove();
+    // Игра из ссылки: под ней лента должна стоять на этой же игре
+    // (если вкладка открылась в фоне, прокрутка могла не встать).
+    var landId = player.__land && player.__g.id;
     player = null;
+    if (landId) {
+      var sl = [].filter.call(document.querySelectorAll('#feed .g-slide'), function (x) { return x.dataset.id === landId; })[0];
+      if (sl && Math.abs($('feed').scrollTop - sl.offsetTop) > 2) $('feed').scrollTop = sl.offsetTop;
+    }
     if (!open) document.body.style.overflow = '';
     if (history.state && history.state.play) history.back();
   }
@@ -2942,7 +2949,7 @@
         var shared = games.filter(function (g) { return g.id === want; })[0];
         // Ссылка на игру открывает саму игру, лента остаётся под ней:
         // закрыл — и ты в ленте на этой же игре.
-        if (shared && !START.get('duel') && START.get('c') !== '1') play(shared, { noHash: true });
+        if (shared && !START.get('duel') && START.get('c') !== '1') play(shared, { noHash: true, land: true });
       }
       /* Вернулись со входа (или пришли по ссылке из уведомления):
          сразу открываем комментарии этой игры. */
