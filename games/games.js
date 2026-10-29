@@ -404,11 +404,15 @@
       if (!/^\//.test(src)) im.crossOrigin = 'anonymous';
       im.onload = function () {
         try {
-          var h = Math.round(w * im.naturalHeight / Math.max(1, im.naturalWidth));
-          var a = document.createElement('canvas'); a.width = w; a.height = h;
-          var x = a.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(im, 0, 0, w, h);
-          tone(x, w, h, sat, br);
-          var b = document.createElement('canvas'); b.width = w * 8; b.height = h * 8;
+          // Точек по короткой стороне всегда w: у горизонтальной обложки
+          // иначе в высокую карточку попадали две-три точки, растянутые
+          // на весь экран, — с резкой полосой на стыке.
+          var nw = Math.max(1, im.naturalWidth), nh = Math.max(1, im.naturalHeight), k = w / Math.min(nw, nh);
+          var cw = Math.max(1, Math.round(nw * k)), h = Math.max(1, Math.round(nh * k));
+          var a = document.createElement('canvas'); a.width = cw; a.height = h;
+          var x = a.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(im, 0, 0, cw, h);
+          tone(x, cw, h, sat, br);
+          var b = document.createElement('canvas'); b.width = cw * 8; b.height = h * 8;
           var y = b.getContext('2d'); y.imageSmoothingQuality = 'high'; y.drawImage(a, 0, 0, b.width, b.height);
           ok(b.toDataURL('image/jpeg', 0.8));
         } catch (e) { no(e); }   // чужая обложка без разрешения — оставляем живое размытие
@@ -418,6 +422,12 @@
     });
     return softCache[src];
   }
+  /* Горизонтальная обложка в высокой карточке телефона стояла полоской
+     посередине. Такую растягиваем на всю карточку (видна середина). */
+  document.addEventListener('load', function (e) {
+    var el = e.target;
+    if (el && el.classList && el.classList.contains('g-shot') && el.naturalWidth > el.naturalHeight) el.classList.add('is-wide');
+  }, true);
   function softBacks(slide) {
     [].forEach.call(slide.querySelectorAll('img.g-back:not(.is-soft),img.g-fill:not(.is-soft)'), function (el) {
       var src = el.getAttribute('src');

@@ -144,7 +144,8 @@
       "Runner",
       "Racing"
     ],
-    "cover": "/games/covers/market.webp",
+    "cover": "/games/covers/market.webp?v=2",
+    "coverSquare": "/games/covers/market-square.webp",
     "url": "https://plairpro.github.io/market/",
     "repo": "https://github.com/plairpro/market",
     "by": "plairpro",
