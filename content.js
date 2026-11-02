@@ -41,6 +41,17 @@ window.PLAIR_CONFIG = {
 window.PLAIR_CLIENTS = [];
 window.PLAIR_CASES = [
   {
+    id: "dron",
+    title: "Дрон",
+    category: "Стенд / web",
+    description: "Игра с однокнопочным физическим управлением про промышленный дрон InnoSpector на выставке форума KDW",
+    media: [
+      { type: "image", src: "/assets/dron-1.webp", w: 1920, h: 1006, alt: "Игровой экран «Дрона»: промышленный дрон со сканером летит по подземной шахте между каменными выступами, вверху — защита, заряд и пройденные метры" },
+      { type: "image", src: "/assets/dron-2.webp", w: 1470, h: 1960, alt: "Гости стенда Университета Иннополис на форуме KDW с фирменной футболкой на фоне экрана со стартом игры «Дрон»" },
+      { type: "image", src: "/assets/dron-3.webp", w: 1470, h: 1960, alt: "Посетители выставки форума KDW у стенда с игрой и буклетами PLAIR Studio" }
+    ]
+  },
+  {
     id: "puteshestvie-po-rossii",
     title: "Путешествие по России",
     category: "Стенд",
