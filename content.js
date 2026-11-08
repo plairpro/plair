@@ -42,6 +42,7 @@ window.PLAIR_CLIENTS = [];
 window.PLAIR_CASES = [
   {
     id: "dron",
+    hidden: true,   // скрыт с сайта; убрать строку — кейс вернётся
     title: "Дрон",
     category: "Стенд / web",
     description: "Игра с однокнопочным физическим управлением про промышленный дрон InnoSpector на выставке форума KDW",

@@ -2,7 +2,7 @@
   'use strict';
   const root = document.getElementById('studio-showcase');
   if (!root) return;
-  const projects = (window.PLAIR_CASES || []).filter(p => p.media?.length);
+  const projects = (window.PLAIR_CASES || []).filter(p => p.media?.length && !p.hidden);
   if (!projects.length) { root.hidden = true; return; }
   const $ = id => document.getElementById(id);
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

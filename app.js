@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const $ = (id) => document.getElementById(id);
-  const cases = (window.PLAIR_CASES || []).filter(item => Array.isArray(item.media) && item.media.length);
+  const cases = (window.PLAIR_CASES || []).filter(item => Array.isArray(item.media) && item.media.length && !item.hidden);
   const config = window.PLAIR_CONFIG || {};
   const dialog = $('contact-dialog');
   const form = $('contact-form');
