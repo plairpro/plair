@@ -151,5 +151,10 @@
     "by": "plairpro",
     "added": "2026-10-27",
     "verified": true
+  },
+  {
+    "id": "muskrat-hat",
+    "patch": true,
+    "cover": "/games/covers/muskrat-hat.webp"
   }
 ]

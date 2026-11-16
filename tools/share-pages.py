@@ -197,6 +197,9 @@ def page(g, ver):
 def main():
     import hashlib, urllib.parse  # noqa: F401  (urllib.parse нужен в page)
     games = json.load(open(os.path.join(ROOT, 'games', 'games.json'), encoding='utf-8'))
+    # "patch": true — правка присланной игры (например, обложка), а не игра.
+    patches = [g for g in games if g.get('patch')]
+    games = [g for g in games if not g.get('patch')]
     if '--server' in sys.argv:
         try:
             extra = json.loads(fetch(SERVER + '/games')).get('games', [])
@@ -204,6 +207,10 @@ def main():
             games += [g for g in extra if g.get('id') and g['id'] not in ids]
         except Exception as e:
             print('server games not loaded:', e, file=sys.stderr)
+    for p in patches:
+        for g in games:
+            if g.get('id') == p.get('id'):
+                g.update({k: v for k, v in p.items() if k not in ('id', 'patch')})
     out = os.path.join(ROOT, 'g')
     for g in games:
         if not re.match(r'^[a-z0-9-]{1,40}$', g.get('id', '')):

@@ -2864,10 +2864,21 @@
           .then(function (d) { return d && d.ok ? d.games : []; }).catch(function () { return []; })
       : Promise.resolve([]);
     return Promise.all([base, extra]).then(function (both) {
-      var list = Array.isArray(both[0]) ? both[0] : [];
+      var all = Array.isArray(both[0]) ? both[0] : [];
+      /* Запись каталога с "patch": true — не отдельная игра, а правка
+         присланной через форму (например, новая обложка): её поля
+         ложатся поверх серверных. Нет такой игры на сервере — правка молчит. */
+      var patches = all.filter(function (g) { return g && g.patch; });
+      var list = all.filter(function (g) { return g && !g.patch; });
       var ids = {};
       list.forEach(function (g) { ids[g.id] = 1; });
       both[1].forEach(function (g) { if (g && g.id && !ids[g.id]) { ids[g.id] = 1; list.push(g); } });
+      patches.forEach(function (p) {
+        list.forEach(function (g) {
+          if (g.id !== p.id) return;
+          for (var k in p) if (k !== 'id' && k !== 'patch') g[k] = p[k];
+        });
+      });
       list.sort(byDate);
       return list;
     });
